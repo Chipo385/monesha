@@ -1,0 +1,14 @@
+# macOS metadata (created automatically on exFAT drives)
+._*
+.DS_Store
+.Spotlight-V100
+.Trashes
+
+# Local tool settings
+.claude/settings.local.json
+
+# Internal business plan: stays on this drive, never in the repository
+docs/BUSINESS.md
+
+# Old exports and AI renders: name equipment and contain retired content; kept on this drive only
+reference/

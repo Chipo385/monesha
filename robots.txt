@@ -1,0 +1,6 @@
+User-agent: *
+Disallow: /tools/
+Disallow: /reference/
+Disallow: /assets/logo/
+
+Sitemap: https://chipo385.github.io/monesha/sitemap.xml

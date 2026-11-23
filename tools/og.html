@@ -1,0 +1,46 @@
+<!doctype html>
+<!-- Social preview card (1200×630). Rendered to assets/og.jpg by tools/build-assets.sh. Not linked from the site. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>OG card</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;700;800&family=Instrument+Serif:ital@1&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+  <script type="importmap">
+    { "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    } }
+  </script>
+  <style>
+    html, body { margin: 0; width: 1200px; height: 630px; overflow: hidden; background: #0b0d0c; color: #eef2ea; font-family: 'Inter Tight', sans-serif; }
+    canvas { position: absolute; left: 330px; top: -30px; width: 960px; height: 700px; }
+    .fade { position: absolute; inset: 0; background: linear-gradient(90deg, #0b0d0c 0%, rgba(11,13,12,.9) 30%, rgba(11,13,12,0) 58%), linear-gradient(0deg, #0b0d0c 0%, rgba(11,13,12,0) 22%); }
+    .txt { position: absolute; left: 72px; top: 0; bottom: 0; width: 600px; display: flex; flex-direction: column; justify-content: center; }
+    .brand { display: flex; align-items: center; gap: 16px; margin-bottom: 54px; }
+    .brand svg { width: 58px; height: 58px; color: #eef2ea; }
+    .word { display: flex; flex-direction: column; font-weight: 800; letter-spacing: .18em; font-size: 22px; line-height: 1.1; }
+    .word small { font: 500 13px/1.5 'JetBrains Mono', monospace; letter-spacing: .28em; color: #8b968c; }
+    h1 { font-size: 78px; line-height: 1; letter-spacing: -.045em; margin: 0 0 26px; font-weight: 700; }
+    h1 em { font-family: 'Instrument Serif', serif; font-weight: 400; color: #c6f36b; letter-spacing: -.01em; }
+    p { font: 500 15px/1.6 'JetBrains Mono', monospace; letter-spacing: .06em; text-transform: uppercase; color: #a9b3a8; margin: 0; }
+  </style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+  <div class="fade"></div>
+  <div class="txt">
+    <div class="brand">
+      <svg viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="20.5" stroke="currentColor" stroke-width="2.6"/><circle cx="26.2" cy="22.2" r="14" stroke="currentColor" stroke-width="2.4" opacity=".75"/><circle cx="28.2" cy="20.6" r="8.2" stroke="currentColor" stroke-width="2.2" opacity=".55"/><circle cx="29.6" cy="19.5" r="3.4" fill="#c6f36b"/></svg>
+      <span class="word">MONESHA<small>PRECISION TECH</small></span>
+    </div>
+    <h1>The digital twin<br>of your <em>land</em>.</h1>
+    <p>Mapping · Crop intelligence · Groundwater<br>Farm engineering · Monitoring · Zambia</p>
+  </div>
+  <script type="module">
+    import { initHero } from '../js/scenes.js';
+    const hero = initHero(document.getElementById('c'));
+    hero.setStage(3);
+    document.getElementById('c').addEventListener('twin:ready', () => setTimeout(() => { document.title = 'ready'; }, 1500));
+  </script>
+</body>
+</html>
