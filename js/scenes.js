@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { generateLandscape, makeNoise, sample, mulberry32 } from './terrain.js';
-import { addLights, treeMesh, yardGroup, LOW } from './detail.js';
+import { addLights, treeMesh, yardGroup, LOW, lin, linearizeUnlit, srgbVertexColors, waterMesh } from './detail.js';
 
 // Colours are authored in sRGB and passed straight through.
 THREE.ColorManagement.enabled = false;
@@ -188,6 +188,82 @@ function heightMesh(N, W, heightAt, colors) {
   g.setAttribute('color', new THREE.BufferAttribute(colors, 3));
   g.computeVertexNormals();
   return g;
+}
+
+
+/*
+ * Physically based terrain for the farm views. Vertex colours carry the data (crop, layer,
+ * relief); the shader adds what a 13 m data grid cannot: grass, dry straw, bare laterite,
+ * rock on steep ground, fine texture, field rows and pivot wheel tracks, baked ambient
+ * occlusion and contour lines. uNatural = 1 for the natural-colour view, 0 for data layers
+ * (so their colours stay readable). Lit by the sun, sky and shadows like everything else.
+ */
+function realTerrainMaterial({ contour = 0.085, contourAlpha = 0.08, ring = 0.1 } = {}) {
+  const U = {
+    uContour: { value: contour }, uContourAlpha: { value: contourAlpha },
+    uRing: { value: ring }, uFarm: { value: 1 }, uNatural: { value: 1 },
+  };
+  const m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.94, metalness: 0, envMapIntensity: 0.85 });
+  m.uniforms = U;
+  m.onBeforeCompile = (sh) => {
+    Object.assign(sh.uniforms, U);
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', `#include <common>
+        attribute float aKind; attribute float aRow; attribute float aAO; attribute float aSeed;
+        varying float vKind; varying float vRow; varying float vAO; varying float vSeed; varying vec3 vW; varying vec3 vNW;`)
+      .replace('#include <begin_vertex>', `#include <begin_vertex>
+        vKind = aKind; vRow = aRow; vAO = aAO; vSeed = aSeed;
+        vW = (modelMatrix * vec4(transformed, 1.0)).xyz;
+        vNW = normalize(mat3(modelMatrix) * objectNormal);`);
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', `#include <common>
+        uniform float uContour; uniform float uContourAlpha; uniform float uRing; uniform float uFarm; uniform float uNatural;
+        varying float vKind; varying float vRow; varying float vAO; varying float vSeed; varying vec3 vW; varying vec3 vNW;
+        float mo_h(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+        float mo_n(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+          return mix(mix(mo_h(i), mo_h(i + vec2(1.0, 0.0)), f.x), mix(mo_h(i + vec2(0.0, 1.0)), mo_h(i + vec2(1.0, 1.0)), f.x), f.y); }
+        float mo_fbm(vec2 p) { float a = 0.5, s = 0.0; for (int i = 0; i < 4; i++) { s += a * mo_n(p); p = p * 2.03 + 1.7; a *= 0.5; } return s; }
+        float mo_line(float x) { float f = abs(fract(x - 0.5) - 0.5) / max(fwidth(x), 1e-4); return 1.0 - min(f, 1.0); }`)
+      .replace('#include <color_fragment>', `
+        vec3 c = pow(vColor.rgb, vec3(2.2));
+        float dist = distance(vW, cameraPosition);
+        float nearF = 1.0 - smoothstep(1.5, 12.0, dist);
+        float slopeW = 1.0 - clamp(normalize(vNW).y, 0.0, 1.0);
+        float n1 = mo_fbm(vW.xz * 7.0), n2 = mo_n(vW.xz * 60.0), n3 = mo_n(vW.xz * 240.0);
+        c *= 0.82 + 0.36 * mix(n1, 0.5 * n2 + 0.5 * n3, 0.3 + 0.45 * nearF);
+        float wild = 1.0 - step(0.5, vKind) * uFarm;
+        if (uNatural > 0.5) {
+          // real ground is dusty: pull saturation down, farmed soil and crops most of all
+          float lum = dot(c, vec3(0.2126, 0.7152, 0.0722));
+          c = mix(vec3(lum), c, mix(0.74, 0.86, wild)) * mix(0.88, 1.0, wild);
+          // patchwork: every field its own crop tone and density (yellow-green to blue-green)
+          float farmed = 1.0 - wild;
+          vec3 tone = mix(vec3(1.12, 1.02, 0.72), vec3(0.82, 1.03, 0.95), vSeed);
+          c *= mix(vec3(1.0), tone * (0.86 + 0.28 * fract(vSeed * 7.31)), farmed);
+          c *= mix(1.0, 0.9 + 0.2 * mo_fbm(vW.xz * 18.0 + vSeed * 40.0), farmed);
+          // savanna ground: cured straw grass, green flush along drainage, bare laterite patches
+          vec3 straw = vec3(0.36, 0.27, 0.12), flush = vec3(0.07, 0.13, 0.04), soil = vec3(0.30, 0.11, 0.05);
+          float g = mo_fbm(vW.xz * 3.1 + 11.0);
+          c = mix(c, mix(straw, flush, smoothstep(0.38, 0.72, g)) * (0.75 + 0.5 * n2), 0.32 * wild);
+          float bare = smoothstep(0.64, 0.8, mo_fbm(vW.xz * 9.0 + 3.0)) * wild;
+          c = mix(c, soil * (0.8 + 0.4 * n3), bare * 0.5);
+          // rock and scree where the ground is steep
+          float rock = smoothstep(0.4, 0.62, slopeW + (n1 - 0.5) * 0.22);
+          c = mix(c, vec3(0.16, 0.14, 0.12) * (0.7 + 0.6 * n3), rock * 0.85);
+        }
+        if (uFarm > 0.5) {
+          if (vKind > 0.5 && vKind < 1.5) {
+            c *= 1.0 - 0.24 * mo_line(vRow / 0.1);
+            c *= 1.0 - 0.16 * mo_line(vRow / 0.0125) * nearF;
+          } else if (vKind > 1.5 && vKind < 2.5) {
+            c *= 1.0 - 0.32 * mo_line(vRow / uRing) * step(0.6, vRow / uRing);
+          }
+        }
+        c *= mix(1.0, vAO, 0.45 + 0.55 * uNatural);
+        c = mix(c, c * 0.45, mo_line(vW.y / uContour) * uContourAlpha);
+        diffuseColor.rgb = c;`);
+  };
+  return m;
 }
 
 /* Vertical walls around a heightfield tile, coloured by a callback (for strata). */
@@ -416,7 +492,7 @@ export function getFarm() {
         // Field margins between parcels
         if (!untouched && L.field[k] >= 0) {
           const f = L.field[k];
-          if ((k % N < N - 1 && L.field[k + 1] !== f) || (k + N < N * N && L.field[k + N] !== f)) c = c.map((x) => x * 0.72);
+          if ((k % N < N - 1 && L.field[k + 1] !== f) || (k + N < N * N && L.field[k + N] !== f)) c = c.map((x) => x * 0.93); // soft margin: the 13 m grid would show as steps
         }
         // Dirt roads and yard hardstanding
         if (!untouched && road[k] > 0) c = mix3(c, hex(0xa38b68), road[k]);
@@ -433,15 +509,51 @@ export function getFarm() {
     };
   }
 
+  // Ambient occlusion: how much of the sky each point sees, from the terrain horizon in 8 directions.
+  let aoCache = null;
+  function ambientOcclusion() {
+    if (aoCache) return aoCache;
+    const ao = new Float32Array(N * N), cell = W / (N - 1), steps = [1, 2, 3, 5, 8, 12];
+    const dirs = Array.from({ length: 8 }, (_, d) => [Math.cos(d * Math.PI / 4), Math.sin(d * Math.PI / 4)]);
+    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+      const k = j * N + i, h0 = heightAt(k);
+      let occ = 0;
+      for (const [dx, dz] of dirs) {
+        let best = 0;
+        for (const s of steps) {
+          const x = Math.round(i + dx * s), z = Math.round(j + dz * s);
+          if (x < 0 || z < 0 || x >= N || z >= N) break;
+          best = Math.max(best, (heightAt(z * N + x) - h0) / (s * cell));
+        }
+        occ += Math.atan(best) / (Math.PI / 2);
+      }
+      const canopy = Math.min(1, shadeNat[k] + shadeRows[k] * 0.5);
+      ao[k] = Math.max(0.35, 1 - 1.6 * occ / 8 - 0.18 * canopy);
+    }
+    return (aoCache = ao);
+  }
+  // One random value per field (and per pivot), so each field gets its own crop tone.
+  let seedCache = null;
+  function fieldSeed() {
+    if (seedCache) return seedCache;
+    const sd = new Float32Array(N * N), fr = (x) => { const v = Math.sin(x * 12.9898 + 4.1) * 43758.5453; return v - Math.floor(v); };
+    for (let k = 0; k < N * N; k++) sd[k] = inPivot[k] >= 0 ? fr(100 + inPivot[k]) : L.field[k] >= 0 ? fr(L.field[k]) : 0.5;
+    return (seedCache = sd);
+  }
   function mesh(colors, material) {
     const geom = heightMesh(N, W, heightAt, colors);
     geom.setAttribute('aKind', new THREE.BufferAttribute(aKind, 1));
     geom.setAttribute('aRow', new THREE.BufferAttribute(aRow, 1));
-    return new THREE.Mesh(geom, material);
+    geom.setAttribute('aAO', new THREE.BufferAttribute(ambientOcclusion(), 1));
+    geom.setAttribute('aSeed', new THREE.BufferAttribute(fieldSeed(), 1));
+    const m = new THREE.Mesh(geom, material);
+    m.receiveShadow = !LOW;
+    return m;
   }
   function skirt() {
     const soil = hex(0x3a2b20), deep = hex(0x1a1714);
-    return new THREE.Mesh(skirtGeometry(N, W, heightAt, -0.6, 10, (x, y, z, d) => mix3(soil, deep, Math.min(1, d / 2))), terrainMaterial({ contourAlpha: 0 }));
+    return new THREE.Mesh(skirtGeometry(N, W, heightAt, -0.6, 10, (x, y, z, d) => mix3(soil, deep, Math.min(1, d / 2))),
+      srgbVertexColors(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0 })));
   }
   const ringSpacing = L.pivots.length ? (L.pivots[0].r * W) / 7 : 0.1;
 
@@ -453,6 +565,7 @@ export function getFarm() {
       orchard: treeMesh(trees.orchard, 'citrus'),
       plantation: treeMesh(trees.plantation, 'euc'),
       yard: yardGroup(FARM),
+      water: waterMesh(N, W, heightAt, L.riverMask),
     };
     groups.preclear.visible = preclear;
     groups.orchard.visible = groups.plantation.visible = planted;
@@ -600,10 +713,10 @@ export function initHero(canvas, { onStats } = {}) {
 
   const colors = new Float32Array(N * N * 3);
   let target = colors;
-  const terrain = farm.mesh(colors, terrainMaterial({ contour: 0.085, contourAlpha: 0.12, detail: true, ring: farm.ringSpacing }));
+  const terrain = farm.mesh(colors, realTerrainMaterial({ contour: 0.085, contourAlpha: 0.07, ring: farm.ringSpacing }));
   const geom = terrain.geometry;
   scene.add(terrain, farm.skirt());
-  addLights(scene, [14, 34]);
+  addLights(scene, [14, 34], viewer.renderer);
   farm.addDetail(scene);
 
   // Pivot outlines
@@ -643,6 +756,7 @@ export function initHero(canvas, { onStats } = {}) {
   surveyGroup.add(flightLine);
   scene.add(surveyGroup);
 
+  linearizeUnlit(scene);
   const state = { layer: 'terrain', stage: 0 };
   let blending = true;
   viewer.tickers.push((dt) => {
@@ -670,7 +784,7 @@ export function initHero(canvas, { onStats } = {}) {
   geom.attributes.color.needsUpdate = true;
 
   return {
-    setLayer(l) { state.layer = l; update(); },
+    setLayer(l) { state.layer = l; terrain.material.uniforms.uNatural.value = l === 'terrain' ? 1 : 0; update(); },
     setStage(s) { state.stage = s; update(); },
     zoom: viewer.zoom,
     setInteractive: viewer.setInteractive,
@@ -861,10 +975,10 @@ export function initWatch(canvas, { layer = 'terrain', stage = 2 } = {}) {
   cam.up.set(0, 0, -1); // screen up = north (-z), so u -> left %, v -> top %
   cam.lookAt(0, 0, 0);
 
-  const mat = terrainMaterial({ contour: 0.085, contourAlpha: 0.05, fog: [200, 300], detail: true, ring: farm.ringSpacing });
+  const mat = realTerrainMaterial({ contour: 0.085, contourAlpha: 0.03, ring: farm.ringSpacing });
   const mesh = farm.mesh(farm.colorsFor(layer, stage).colors, mat);
   scene.add(mesh);
-  addLights(scene);
+  addLights(scene, null, renderer);
   farm.addDetail(scene);
   for (const p of L.pivots) {
     const pts = [];
@@ -872,6 +986,8 @@ export function initWatch(canvas, { layer = 'terrain', stage = 2 } = {}) {
     scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: 0x0b0d0c, transparent: true, opacity: 0.75 })));
   }
 
+  linearizeUnlit(scene);
+  mat.uniforms.uNatural.value = layer === 'terrain' ? 1 : 0;
   function render() {
     const w = canvas.clientWidth, h = canvas.clientHeight;
     if (!w || !h) return;
@@ -891,6 +1007,7 @@ export function initWatch(canvas, { layer = 'terrain', stage = 2 } = {}) {
   return {
     alerts,
     setLayer(l) {
+      mat.uniforms.uNatural.value = l === 'terrain' ? 1 : 0;
       mesh.geometry.attributes.color.array.set(farm.colorsFor(l, stage).colors);
       mesh.geometry.attributes.color.needsUpdate = true;
       render();
@@ -914,14 +1031,14 @@ export function initEngineering(canvas, { onReadout } = {}) {
   });
   const { scene } = viewer;
   // 2 m contour interval (vertical units: VS per 60 m of relief)
-  const mat = terrainMaterial({ contour: (farm.VS / SITE.reliefM) * 2, contourAlpha: 0.22, fog: [3, 7], detail: true, ring: farm.ringSpacing });
+  const mat = realTerrainMaterial({ contour: (farm.VS / SITE.reliefM) * 2, contourAlpha: 0.22, ring: farm.ringSpacing });
   const crop = farm.colorsFor('terrain', 3).colors;
   let dev = 0;
   for (let k = 0; k < N * N; k++) if (inPivot[k] === 0) dev = Math.max(dev, Math.abs(L.h[k] - h0));
   const relief = farm.colorsFor('terrain', 3, { pivotRelief: { index: 0, h0, scaleM: dev * SITE.reliefM } }).colors;
   const mesh = farm.mesh(relief.slice(), mat);
   scene.add(mesh);
-  addLights(scene, [3, 7]);
+  addLights(scene, [3, 7], viewer.renderer, { center: centre, extent: 1.9 });
   farm.addDetail(scene);
 
   const pivot = buildPivot(farm, p, { towers: 7 });
@@ -960,8 +1077,11 @@ export function initEngineering(canvas, { onReadout } = {}) {
     rangeM, pressureBar: rangeM * 0.0981, maxGrade,
   });
 
+  linearizeUnlit(scene);
+  mat.uniforms.uNatural.value = 0; // starts on "height under span"
   return {
     setRelief(on) {
+      mat.uniforms.uNatural.value = on ? 0 : 1;
       mesh.geometry.attributes.color.array.set(on ? relief : crop);
       mesh.geometry.attributes.color.needsUpdate = true;
     },
@@ -981,21 +1101,22 @@ export function renderOutcome(beforeImg, afterImg, { width = LOW ? 1100 : 1600, 
   canvas.width = width; canvas.height = height;
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
   renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
-  renderer.setClearColor(0x0b0d0c, 1);
+  renderer.setClearColor(lin(0x0b0d0c), 1);
   const scene = new THREE.Scene();
   const cam = new THREE.PerspectiveCamera(28, width / height, 0.1, 100);
   cam.position.set(6.2, 3.4, 7.4);
   const aim = L.pivots.length ? L.pivots.reduce((s, p) => s.add(farm.toWorld(p.u, p.v)), new THREE.Vector3()).divideScalar(L.pivots.length) : new THREE.Vector3(0, 0.3, 0);
   cam.position.set(aim.x + 3.6, aim.y + 2.3, aim.z + 4.4);
   cam.lookAt(aim);
-  const mat = terrainMaterial({ contour: 0.085, contourAlpha: 0.05, fog: [11, 24], detail: true, ring: farm.ringSpacing });
+  const mat = realTerrainMaterial({ contour: 0.085, contourAlpha: 0.03, ring: farm.ringSpacing });
   const before = farm.colorsFor('terrain', 0, { untouched: true }).colors;
   const after = farm.colorsFor('terrain', 3).colors;
   const mesh = farm.mesh(before.slice(), mat);
   scene.add(mesh, farm.skirt());
-  addLights(scene, [11, 24]);
+  addLights(scene, [11, 24], renderer);
   const det = farm.addDetail(scene, { preclear: true, planted: false, farmyard: false });
   mat.uniforms.uFarm.value = 0;
+  linearizeUnlit(scene);
   renderer.render(scene, cam);
   beforeImg.src = canvas.toDataURL('image/jpeg', 0.88);
 
@@ -1012,6 +1133,7 @@ export function renderOutcome(beforeImg, afterImg, { width = LOW ? 1100 : 1600, 
   det.preclear.visible = false;
   mat.uniforms.uFarm.value = 1;
   det.orchard.visible = det.plantation.visible = det.yard.visible = true;
+  linearizeUnlit(scene);
   renderer.render(scene, cam);
   afterImg.src = canvas.toDataURL('image/jpeg', 0.88);
   renderer.dispose();
@@ -1033,10 +1155,10 @@ export function initStory(canvas) {
   // Terrain whose colours blend between chapters
   const colors = new Float32Array(N * N * 3);
   let target = colors, blending = false;
-  const mat = terrainMaterial({ contour: 0.085, contourAlpha: 0.1, fog: [18, 42], detail: true, ring: farm.ringSpacing });
+  const mat = realTerrainMaterial({ contour: 0.085, contourAlpha: 0.07, ring: farm.ringSpacing });
   const terrain = farm.mesh(colors, mat);
   scene.add(terrain, farm.skirt());
-  addLights(scene, [18, 42]);
+  addLights(scene, [18, 42], viewer.renderer);
   const det = farm.addDetail(scene, { preclear: true, planted: false, farmyard: false });
 
   const ring = (p, y, color, opacity) => {
@@ -1163,6 +1285,7 @@ export function initStory(canvas) {
     det.orchard.visible = det.plantation.visible = det.yard.visible = farmed;
     mat.uniforms.uContourAlpha.value = c.contour;
     mat.uniforms.uFarm.value = farmed ? 1 : 0;
+    mat.uniforms.uNatural.value = i === 0 || i === 2 ? 1 : 0;
   }
   function go(i) {
     if (i === step && from) return;
@@ -1216,5 +1339,6 @@ export function initStory(canvas) {
     if (model.visible) model.children.forEach((m) => { if (m.geometry.type === 'RingGeometry') { const s = 1 + 0.3 * Math.sin(clock * 2.5); m.scale.set(s, s, s); } });
   });
 
+  linearizeUnlit(scene);
   return { go, alerts, holes, chapters: CHAPTERS.length };
 }
