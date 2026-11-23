@@ -234,8 +234,9 @@ function ramp(stops, t) {
 
 const RAMPS = {
   terrain: [[0, hex(0x2c4427)], [0.3, hex(0x4f6234)], [0.55, hex(0x76683f)], [0.78, hex(0x8a6a45)], [1, hex(0xa8987c)]],
-  ndvi: [[0, hex(0x8c2d19)], [0.25, hex(0xd9822b)], [0.45, hex(0xe8d36a)], [0.65, hex(0x8cc84b)], [1, hex(0x1f7a3a)]],
-  water: [[0, hex(0x5a4632)], [0.35, hex(0x8a7a5c)], [0.6, hex(0x3f8f9a)], [0.82, hex(0x2a6fb5)], [1, hex(0x1b3f8f)]],
+  // Vigour and moisture read by lightness (light = low, dark = high), so they stay legible with colour-blindness.
+  ndvi: [[0, hex(0xefe3a6)], [0.3, hex(0xc8cd78)], [0.55, hex(0x8db35a)], [0.78, hex(0x4f8a3f)], [1, hex(0x235f30)]],
+  water: [[0, hex(0xe3d3a4)], [0.3, hex(0xa9bcae)], [0.55, hex(0x6a9cc6)], [0.8, hex(0x3471b3)], [1, hex(0x1b4685)]],
   fire: [[0, hex(0x1d2a22)], [0.4, hex(0x52603a)], [0.62, hex(0xd99a2b)], [0.8, hex(0xe0561f)], [1, hex(0xb81d13)]],
 };
 

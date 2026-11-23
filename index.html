@@ -24,12 +24,23 @@
   <meta name="twitter:title" content="Monesha Precision Tech — Digital twins for Zambian farms">
   <meta name="twitter:description" content="3D land mapping, crop intelligence, groundwater survey, farm design, precision spraying and monitoring for farms, orchards and plantations across Zambia.">
   <meta name="twitter:image" content="https://chipo385.github.io/monesha/assets/og.jpg">
-  <script>document.documentElement.className = document.documentElement.className.replace("no-js", "js");</script>
+  <script>
+    // JS is on; decide low-data mode before paint, and only preload the 3D library when it will be used.
+    (function (d) {
+      d.className = d.className.replace("no-js", "js");
+      var saved = null; try { saved = localStorage.getItem("monesha-lite"); } catch (e) {}
+      var c = navigator.connection;
+      var lite = saved ? saved === "1" : !!(c && (c.saveData || /(^|-)2g|3g/.test(c.effectiveType || "")));
+      if (lite) { d.classList.add("lite"); return; }
+      var l = document.createElement("link");
+      l.rel = "modulepreload"; l.crossOrigin = ""; l.href = "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
+      document.head.appendChild(l);
+    })(document.documentElement);
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
-  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" crossorigin>
   <script type="application/ld+json">{"@context": "https://schema.org", "@type": "ProfessionalService", "name": "Monesha Precision Tech", "alternateName": "Monesha", "url": "https://chipo385.github.io/monesha/", "logo": "https://chipo385.github.io/monesha/assets/icons/icon-512.png", "image": "https://chipo385.github.io/monesha/assets/og.jpg", "description": "3D land mapping, crop intelligence, groundwater survey, farm design and engineering, precision spraying and farm monitoring for farms, orchards and plantations in Zambia.", "areaServed": {"@type": "Country", "name": "Zambia"}, "address": {"@type": "PostalAddress", "addressLocality": "Lusaka", "addressCountry": "ZM"}, "knowsAbout": ["Precision agriculture", "Digital twin", "Groundwater survey", "Centre pivot irrigation design", "Crop health monitoring"], "hasOfferCatalog": {"@type": "OfferCatalog", "name": "Services", "itemListElement": [{"@type": "Offer", "itemOffered": {"@type": "Service", "name": "3D Land Mapping"}}, {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Crop Intelligence"}}, {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Groundwater Survey & Mapping"}}, {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Farm Design & Engineering"}}, {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Precision Spraying"}}, {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Watch: farm monitoring"}}]}}</script>
   <script type="importmap">
     { "imports": {
@@ -54,6 +65,7 @@
         <a href="#engineering">Engineering</a>
         <a href="#watch">Watch</a>
         <a href="#engage">Services</a>
+        <a href="#about">About</a>
         <a href="careers.html">Careers</a>
       </nav>
       <a class="btn btn--primary btn--sm" href="#contact">Book a site survey</a>
@@ -61,7 +73,7 @@
     </div>
     <nav class="nav__mobile" id="mobile-menu" aria-label="Mobile" hidden>
       <a href="#method">Method</a><a href="#water">Water</a><a href="#suitability">Crop fit</a>
-      <a href="#engineering">Engineering</a><a href="#watch">Watch</a><a href="#engage">Services</a><a href="careers.html">Careers</a>
+      <a href="#engineering">Engineering</a><a href="#watch">Watch</a><a href="#engage">Services</a><a href="#about">About</a><a href="careers.html">Careers</a>
       <a href="#contact" class="btn btn--primary">Book a site survey</a>
     </nav>
   </header>
@@ -70,6 +82,7 @@
     <!-- HERO: interactive digital twin -->
     <section class="hero" id="twin" aria-labelledby="hero-title">
       <div class="hero__stage is-loading" data-label="Building the digital twin">
+        <img class="poster" src="assets/renders/hero.jpg" alt="" fetchpriority="high">
         <canvas id="hero-canvas" aria-label="Interactive 3D model of a farm site. Drag to rotate." role="img"></canvas>
         <div class="hero__fade" aria-hidden="true"></div>
       </div>
@@ -85,23 +98,11 @@
       </div>
 
       <div class="hud" aria-label="Twin controls">
-        <div class="hud__row">
-          <div class="seg" role="radiogroup" aria-label="Data layer">
-            <button role="radio" aria-checked="true" data-layer="terrain">Terrain</button>
-            <button role="radio" aria-checked="false" tabindex="-1" data-layer="ndvi">Crop vigour</button>
-            <button role="radio" aria-checked="false" tabindex="-1" data-layer="water">Water &amp; flood</button>
-            <button role="radio" aria-checked="false" tabindex="-1" data-layer="fire">Fire risk</button>
-          </div>
-          <div class="hud__tools">
-            <button class="icon-btn" data-zoom="in" aria-label="Zoom in">+</button>
-            <button class="icon-btn" data-zoom="out" aria-label="Zoom out">&minus;</button>
-            <button class="icon-btn icon-btn--wide only-touch" data-interact aria-pressed="false">Rotate</button>
-          </div>
-        </div>
-        <div class="hud__row hud__row--time">
-          <label for="stage" class="mono">Season</label>
-          <input id="stage" type="range" min="0" max="4" step="1" value="0" aria-valuetext="Day 0 — Site survey">
-          <output id="stage-label" class="mono">Day 0 — Site survey</output>
+        <div class="hud__bar">
+          <button class="hud__play" id="play" type="button" aria-pressed="false"><span class="hud__play-i" aria-hidden="true"></span><span class="hud__play-t">Play the season</span></button>
+          <output id="stage-label" class="hud__stage" for="stage" aria-live="polite">Day 0 — Site survey</output>
+          <button class="hud__load btn btn--primary btn--sm" type="button" data-load3d>Load the 3D twin</button>
+          <button class="hud__more-btn" type="button" aria-expanded="false" aria-controls="hud-more">Explore the twin</button>
         </div>
         <dl class="stats">
           <div><dt>Mean NDVI (fields)</dt><dd id="s-ndvi">—</dd></div>
@@ -109,17 +110,50 @@
           <div><dt>Flood-exposed</dt><dd id="s-flood">—</dd></div>
           <div><dt>High fire risk</dt><dd id="s-fire">—</dd></div>
         </dl>
-        <div class="hud__foot">
-          <div class="layer-legend mono" id="layer-legend" data-layer="terrain" aria-live="polite">
-            <span data-for="terrain">Natural colour · contour lines show the slope</span>
-            <span data-for="ndvi">Stressed <i style="--g:linear-gradient(90deg,#8c2d19,#d9822b,#e8d36a,#8cc84b,#1f7a3a)"></i> Vigorous</span>
-            <span data-for="water">Dry <i style="--g:linear-gradient(90deg,#5a4632,#8a7a5c,#3f8f9a,#2a6fb5,#1b3f8f)"></i> Wet / flood-prone</span>
-            <span data-for="fire">Low <i style="--g:linear-gradient(90deg,#1d2a22,#52603a,#d99a2b,#e0561f,#b81d13)"></i> High fire risk</span>
+        <div class="hud__more" id="hud-more" hidden>
+          <div class="hud__row">
+            <div class="seg" role="radiogroup" aria-label="Data layer">
+              <button role="radio" aria-checked="true" data-layer="terrain">Terrain</button>
+              <button role="radio" aria-checked="false" tabindex="-1" data-layer="ndvi">Crop vigour</button>
+              <button role="radio" aria-checked="false" tabindex="-1" data-layer="water">Water &amp; flood</button>
+              <button role="radio" aria-checked="false" tabindex="-1" data-layer="fire">Fire risk</button>
+            </div>
+            <div class="hud__tools">
+              <button class="icon-btn" data-zoom="in" aria-label="Zoom in">+</button>
+              <button class="icon-btn" data-zoom="out" aria-label="Zoom out">&minus;</button>
+              <button class="icon-btn icon-btn--wide only-touch" data-interact aria-pressed="false">Rotate</button>
+            </div>
           </div>
-          <p class="hud__note mono" data-touch-text="Simulated 576 ha site · tap Rotate to turn the model">Simulated 576 ha site · drag to rotate</p>
+          <div class="hud__row hud__row--time">
+            <label for="stage">Season</label>
+            <input id="stage" type="range" min="0" max="4" step="1" value="0" aria-valuetext="Day 0 — Site survey">
+          </div>
+          <div class="hud__foot">
+            <div class="layer-legend" id="layer-legend" data-layer="terrain" aria-live="polite">
+              <span data-for="terrain">Natural colour · contour lines show the slope</span>
+              <span data-for="ndvi">Stressed <i style="--g:linear-gradient(90deg,#efe3a6,#c8cd78,#8db35a,#4f8a3f,#235f30)"></i> Vigorous</span>
+              <span data-for="water">Dry <i style="--g:linear-gradient(90deg,#e3d3a4,#a9bcae,#6a9cc6,#3471b3,#1b4685)"></i> Wet / flood-prone</span>
+              <span data-for="fire">Low <i style="--g:linear-gradient(90deg,#1d2a22,#52603a,#d99a2b,#e0561f,#b81d13)"></i> High fire risk</span>
+            </div>
+            <p class="hud__note" data-touch-text="Simulated 576 ha site · tap Rotate to turn the model">Simulated 576 ha site · drag to rotate</p>
+          </div>
         </div>
       </div>
     </section>
+
+    <!-- SERVICES AT A GLANCE -->
+    <nav class="svc-strip" aria-label="Services at a glance">
+      <div class="wrap">
+        <ol>
+          <li><a href="#svc-mapping"><span class="mono">01</span>3D Land Mapping</a></li>
+          <li><a href="#svc-crop"><span class="mono">02</span>Crop Intelligence</a></li>
+          <li><a href="#svc-water"><span class="mono">03</span>Groundwater Survey</a></li>
+          <li><a href="#svc-design"><span class="mono">04</span>Farm Design &amp; Engineering</a></li>
+          <li><a href="#svc-spray"><span class="mono">05</span>Precision Spraying <em>Soon</em></a></li>
+          <li><a href="#svc-watch"><span class="mono">06</span>Watch monitoring</a></li>
+        </ol>
+      </div>
+    </nav>
 
     <!-- PROBLEM -->
     <section class="band" aria-labelledby="problem-title">
@@ -189,6 +223,8 @@
         <figure class="viewer" aria-labelledby="water-cap">
           <div class="viewer__bar mono"><span>Subsurface model · 0 to −46 m</span><span class="tag">Illustrative</span></div>
           <div class="viewer__canvas is-loading" data-label="Building the subsurface model">
+            <img class="poster" src="assets/renders/aquifer.jpg" alt="" loading="lazy">
+            <button class="load3d" type="button" data-load3d>Load 3D view</button>
             <canvas id="aquifer-canvas" role="img" aria-label="3D geological block showing strata, water table, a fracture zone and two boreholes."></canvas>
             <div class="viewer__tools">
               <button class="icon-btn" data-zoom2="in" aria-label="Zoom in">+</button>
@@ -272,6 +308,8 @@
         <figure class="viewer" aria-labelledby="eng-cap">
           <div class="viewer__bar mono"><span>Pivot 1 · designed on the surveyed terrain</span><span class="tag">Simulated</span></div>
           <div class="viewer__canvas is-loading" data-label="Laying the pivot on the terrain">
+            <img class="poster" src="assets/renders/eng.jpg" alt="" loading="lazy">
+            <button class="load3d" type="button" data-load3d>Load 3D view</button>
             <canvas id="eng-canvas" role="img" aria-label="3D centre pivot following the slopes of the farm, coloured by height above or below the pivot point."></canvas>
             <div class="viewer__tools">
               <button class="icon-btn" data-zoom3="in" aria-label="Zoom in">+</button>
@@ -314,7 +352,9 @@
           <figure class="viewer viewer--sky" aria-labelledby="sky-cap">
             <div class="viewer__bar mono"><span>Satellite view · Day 45</span><span class="tag">Simulated</span></div>
             <div class="sky is-loading" id="sky" data-label="Rendering the satellite view">
-              <canvas id="watch-canvas" role="img" aria-label="The farm seen from above in true colour, with alert markers."></canvas>
+              <img class="poster" src="assets/renders/sky.jpg" alt="" loading="lazy">
+              <button class="load3d" type="button" data-load3d>Load 3D view</button>
+            <canvas id="watch-canvas" role="img" aria-label="The farm seen from above in true colour, with alert markers."></canvas>
               <div class="sky__scan" aria-hidden="true"></div>
               <div class="sky__pins" id="sky-pins" aria-hidden="true"></div>
             </div>
@@ -336,7 +376,7 @@
               <li data-k="fire" tabindex="0"><b>Fire</b><p>North-east ridge · grass fully cured, NE wind 24 km/h. Open firebreak 3.</p><time>05:42</time></li>
               <li data-k="pest" tabindex="0"><b>Pest</b><p>Pivot 2 · canopy pattern consistent with fall armyworm. Scout within 24 h.</p><time>Yesterday</time></li>
               <li data-k="disease" tabindex="0"><b>Disease</b><p>Orchard A rows 14–19 · red-edge index down 11% in 9 days.</p><time>Yesterday</time></li>
-              <li data-k="wind" tabindex="0"><b>Wind</b><p>Plantation C · gusts to 70 km/h forecast; lodging risk on tall maize.</p><time>Mon</time></li>
+              <li data-k="wind" tabindex="0"><b>Wind</b><p>Ridge fields · gusts to 70 km/h forecast; lodging risk on tall maize.</p><time>Mon</time></li>
               <li data-k="change" tabindex="0"><b>Change</b><p>East boundary · 1.8 ha of new clearing detected.</p><time>Mon</time></li>
             </ul>
           </div>
@@ -357,9 +397,9 @@
           <h2 id="ba-title">What the plan looks like <em>before a cent is spent</em>.</h2>
           <p>Owners, boards and lenders see the end state of the investment, and the evidence behind it, before ground is broken.</p>
         </header>
-        <div class="ba is-loading" id="ba" style="--pos:50%" data-label="Rendering both scenes">
-          <img id="ba-after" alt="Planned: the same land laid out as a farm with fields and two centre pivots" width="1600" height="820">
-          <div class="ba__before"><img id="ba-before" alt="Today: untouched bush and river valley" width="1600" height="820"></div>
+        <div class="ba" id="ba" style="--pos:50%">
+          <img id="ba-after" src="assets/renders/after.jpg" loading="lazy" alt="Planned: the same land laid out as a farm with fields and two centre pivots" width="1600" height="820">
+          <div class="ba__before"><img id="ba-before" src="assets/renders/before.jpg" loading="lazy" alt="Today: untouched bush and river valley" width="1600" height="820"></div>
           <span class="ba__label ba__label--l mono">Today<span class="ba__more"> · untouched land</span></span>
           <span class="ba__label ba__label--r mono">Planned<span class="ba__more"> · designed farm</span></span>
           <div class="ba__handle" aria-hidden="true"></div>
@@ -369,46 +409,111 @@
       </div>
     </section>
 
+    <!-- DELIVERABLES -->
+    <section class="section" id="receive" aria-labelledby="receive-title">
+      <div class="wrap">
+        <header class="section__head">
+          <p class="kicker">07 · What you receive</p>
+          <h2 id="receive-title">Evidence you can <em>hold, share and build from</em>.</h2>
+          <p>Every engagement ends in things your agronomist, contractor, board and bank can use: a written report, the 3D model online, and files that drop straight into design software and farm machinery.</p>
+        </header>
+        <div class="receive">
+          <div class="receive__text">
+            <h3 class="receive__h">A typical greenfield engagement</h3>
+            <ol class="timeline">
+              <li><span class="timeline__t">Week 0</span><b>First call and site brief</b><p>Your goals, the land, access, and what decisions the work needs to support.</p></li>
+              <li><span class="timeline__t">Week 1</span><b>Field survey</b><p>Aerial mapping, geo-referenced soil sampling and groundwater fieldwork on site.</p></li>
+              <li><span class="timeline__t">Weeks 2–3</span><b>Digital twin and crop plan</b><p>Terrain, drainage and subsurface modelled; crops ranked for each block.</p></li>
+              <li><span class="timeline__t">Weeks 4–6</span><b>Design and drawings</b><p>Fields, water and irrigation designed in the twin; contractor-ready drawings.</p></li>
+              <li><span class="timeline__t">Then</span><b>Watch</b><p>Monitoring, alerts and field visits through the season.</p></li>
+            </ol>
+            <p class="receive__note">Indicative for a site of around 500 ha. Timing depends on size, access and season; your proposal states it.</p>
+            <h3 class="receive__h">Deliverables</h3>
+            <ul class="ticks">
+              <li>Survey and design report (PDF), written for owners, lenders and engineers</li>
+              <li>Your farm’s 3D model online, shared with whoever you choose</li>
+              <li>GIS and CAD files: boundaries, contours, fields, drainage, pipe network</li>
+              <li>Prescription and guidance files for variable-rate machinery</li>
+              <li>Borehole siting sheets with coordinates, target depths and evidence</li>
+            </ul>
+            <p class="receive__price"><b>How pricing works.</b> Mapping and crop intelligence are priced per hectare, groundwater per site, design per project, and Watch monthly or yearly. A written quote follows the first call.</p>
+          </div>
+
+          <figure class="report" aria-labelledby="report-cap">
+            <div class="report__stack">
+              <article class="sheet sheet--back" aria-hidden="true">
+                <header class="sheet__run"><span>Section 3 · Groundwater</span><span>p. 14</span></header>
+                <h4>3.2 Borehole targets</h4>
+                <img src="assets/renders/aquifer.jpg" alt="" loading="lazy">
+                <table>
+                  <thead><tr><th>Target</th><th>Structure</th><th>Drill to</th><th>Confidence</th></tr></thead>
+                  <tbody>
+                    <tr><td>BH-A</td><td>Dipping fracture zone</td><td>46 m</td><td>High</td></tr>
+                    <tr><td>BH-C</td><td>Shear zone, NE trend</td><td>52 m</td><td>Medium</td></tr>
+                    <tr><td>BH-D</td><td>Deep saprolite</td><td>38 m</td><td>Medium</td></tr>
+                  </tbody>
+                </table>
+              </article>
+              <article class="sheet sheet--front">
+                <header class="sheet__brand"><svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><circle cx="24" cy="24" r="20.5" stroke="currentColor" stroke-width="2.6"/><circle cx="26.2" cy="22.2" r="14" stroke="currentColor" stroke-width="2.4" opacity=".75"/><circle cx="28.2" cy="20.6" r="8.2" stroke="currentColor" stroke-width="2.2" opacity=".55"/><circle cx="29.6" cy="19.5" r="3.4" class="brand__dot"/></svg><span>MONESHA<small>PRECISION TECH</small></span></header>
+                <p class="sheet__kicker">Site baseline &amp; development plan</p>
+                <h4 class="sheet__title">Example site, Central Province</h4>
+                <img src="assets/renders/sky.jpg" alt="" loading="lazy">
+                <dl class="sheet__facts">
+                  <div><dt>Area surveyed</dt><dd>576 ha</dd></div>
+                  <div><dt>Arable after buffers</dt><dd>273 ha</dd></div>
+                  <div><dt>Centre pivots</dt><dd>2 × 10 ha</dd></div>
+                  <div><dt>Borehole targets</dt><dd>3</dd></div>
+                </dl>
+                <p class="sheet__foot">Sample · simulated data</p>
+              </article>
+            </div>
+            <figcaption id="report-cap">Sample report pages, built on the same simulated site as the 3D model above.</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
     <!-- WHO / SERVICES -->
     <section class="section" id="engage" aria-labelledby="engage-title">
       <div class="wrap">
         <header class="section__head">
-          <p class="kicker">07 · Services</p>
+          <p class="kicker">08 · Services</p>
           <h2 id="engage-title">Map it. Read it. Find the water. <em>Then act.</em></h2>
           <p>Six services, in the order a farm needs them. Every one builds on the same 3D model of your land, so each job makes the next one faster and more accurate.</p>
         </header>
         <ol class="svc">
-          <li class="svc__item">
+          <li id="svc-mapping" class="svc__item">
             <span class="svc__n mono">01</span>
             <h3>3D Land Mapping</h3>
             <p>Centimetre-level 3D terrain of the whole property, including the bare ground under tree canopy. Contours, slopes, drainage, ponding and erosion risk, boundaries, areas and earthworks volumes.</p>
             <p class="svc__meta mono"><span>Per hectare</span><span class="svc__ok">Available</span></p>
           </li>
-          <li class="svc__item">
+          <li id="svc-crop" class="svc__item">
             <span class="svc__n mono">02</span>
             <h3>Crop Intelligence</h3>
             <p>Crop-health maps, early warning of water stress, pests and disease, stand counts and gap maps, orchard tree counts, yield estimates and variable-rate prescriptions for fertiliser and lime.</p>
             <p class="svc__meta mono"><span>Per hectare, per flight</span><span class="svc__ok">Available</span></p>
           </li>
-          <li class="svc__item">
+          <li id="svc-water" class="svc__item">
             <span class="svc__n mono">03</span>
             <h3>Groundwater Survey &amp; Mapping</h3>
             <p>Where the water is and how deep: borehole siting on water-bearing structures, wet- and dry-season water table, surface water, dam and catchment capacity.</p>
             <p class="svc__meta mono"><span>Per site</span><span class="svc__ok">Available</span></p>
           </li>
-          <li class="svc__item">
+          <li id="svc-design" class="svc__item">
             <span class="svc__n mono">04</span>
             <h3>Farm Design &amp; Engineering</h3>
             <p>The farm planned inside its 3D model: what to plant where, fields on the contour, irrigation and water systems to engineering detail, roads, drainage and firebreaks, built with our engineers on site.</p>
             <p class="svc__meta mono"><span>Per project</span><span class="svc__ok">Available</span></p>
           </li>
-          <li class="svc__item">
+          <li id="svc-spray" class="svc__item">
             <span class="svc__n mono">05</span>
             <h3>Precision Spraying</h3>
             <p>Treatment applied only to the patches our crop analysis flags, not the whole field. Less chemical, less diesel, no wheel damage to the crop.</p>
             <p class="svc__meta mono"><span>Per hectare treated</span><span class="svc__soon">Coming soon</span></p>
           </li>
-          <li class="svc__item svc__item--feature">
+          <li id="svc-watch" class="svc__item svc__item--feature">
             <span class="svc__n mono">06</span>
             <h3>Watch</h3>
             <p>The farm kept under observation: regular satellite checks, scheduled flights, alerts for flood, fire, pests, disease, wind and change, and your farm’s live 3D model online. Field visits every 2–3 weeks for estates.</p>
@@ -425,6 +530,25 @@
             <li><b>New land &amp; investors</b>Greenfield development and due diligence</li>
             <li><b>Agricultural lenders</b>Collateral verification and project appraisal</li>
           </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ABOUT -->
+    <section class="section section--alt about" id="about" aria-labelledby="about-title">
+      <div class="wrap about__grid">
+        <div class="about__mark"><svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><circle cx="24" cy="24" r="20.5" stroke="currentColor" stroke-width="2.6"/><circle cx="26.2" cy="22.2" r="14" stroke="currentColor" stroke-width="2.4" opacity=".75"/><circle cx="28.2" cy="20.6" r="8.2" stroke="currentColor" stroke-width="2.2" opacity=".55"/><circle cx="29.6" cy="19.5" r="3.4" class="brand__dot"/></svg></div>
+        <div class="about__text">
+          <p class="kicker">About</p>
+          <h2 id="about-title"><em>Monesha</em> means look deeply.</h2>
+          <p>In Bemba, <i>monesha</i> carries the sense of looking further, with intensity: deep vision. It is how we work. We measure the ground before we draw on it, read the water before anyone drills, and keep watching after the build.</p>
+          <p>Our mark is three rings receding into the land, ending in a single point: what you find when you look deeply enough.</p>
+          <ul class="about__facts">
+            <li><b>Zambian</b>Founded and based in Lusaka</li>
+            <li><b>On the ground</b>Field teams across the Mkushi, Chisamba, Mazabuka and Mpongwe corridors</li>
+            <li><b>One model</b>Engineers, agronomists and data scientists working from the same twin</li>
+          </ul>
+          <p><a class="link-arrow" href="careers.html">We are hiring. See open roles</a></p>
         </div>
       </div>
     </section>
@@ -455,37 +579,69 @@
           <p class="mono small">Lusaka, Zambia · reply within two working days</p>
         </div>
         <form class="form card" id="contact-form" novalidate>
-          <div class="form__grid">
-            <label>Name<input name="name" autocomplete="name" required></label>
-            <label>Organisation<input name="org" autocomplete="organization"></label>
-            <label>Email<input name="email" type="email" autocomplete="email" required></label>
-            <label>Phone / WhatsApp<input name="phone" type="tel" autocomplete="tel"></label>
-            <label>Location / district<input name="location" required></label>
-            <label>Approx. hectares<input name="hectares" inputmode="decimal"></label>
-            <label class="full">The land is
-              <select name="status">
-                <option>Untouched / greenfield</option>
-                <option>An operating farm</option>
-                <option>An orchard or plantation</option>
-                <option>Being evaluated for purchase or lending</option>
-              </select>
-            </label>
-            <fieldset class="full">
-              <legend>Interested in</legend>
-              <label class="check"><input type="checkbox" name="interest" value="Site survey"> Site survey</label>
-              <label class="check"><input type="checkbox" name="interest" value="Groundwater"> Groundwater</label>
-              <label class="check"><input type="checkbox" name="interest" value="Farm design"> Farm design</label>
-              <label class="check"><input type="checkbox" name="interest" value="Watch"> Watch</label>
-            </fieldset>
-            <label class="full">Anything else<textarea name="message" rows="3"></textarea></label>
-            <label class="hp" aria-hidden="true">Leave empty<input name="_gotcha" tabindex="-1" autocomplete="off"></label>
-          </div>
-          <button class="btn btn--primary" type="submit">Send enquiry</button>
+          <ol class="form__steps" aria-label="Enquiry progress">
+            <li aria-current="step">Contact</li>
+            <li>About the land</li>
+          </ol>
+          <fieldset class="form__step" data-step="1">
+            <legend class="sr-only">Step 1 of 2: how to reach you</legend>
+            <div class="form__grid">
+              <label class="full">Name<input name="name" autocomplete="name" required></label>
+              <label>Phone / WhatsApp<input name="phone" type="tel" autocomplete="tel" inputmode="tel" required placeholder="+260"></label>
+              <label>Email <span class="opt">optional</span><input name="email" type="email" autocomplete="email"></label>
+              <label class="full">Where is the land?<input name="location" required placeholder="District, nearest town or farm name"></label>
+              <div class="full locate">
+                <div class="pin__btns">
+                  <button class="btn btn--ghost btn--sm" type="button" data-pin-map>Pin it on a map</button>
+                  <button class="btn btn--ghost btn--sm" type="button" data-pin-here>Use my location</button>
+                  <span class="pin__val mono" id="pin-val" aria-live="polite"></span>
+                </div>
+                <div class="pin__map" id="pin-map" hidden></div>
+                <input type="hidden" name="lat"><input type="hidden" name="lng">
+              </div>
+            </div>
+            <button class="btn btn--primary" type="button" data-next>Continue</button>
+            <p class="form__hint">Two short steps. We reply within two working days, usually by WhatsApp or phone.</p>
+          </fieldset>
+          <fieldset class="form__step" data-step="2" hidden>
+            <legend class="sr-only">Step 2 of 2: about the land</legend>
+            <div class="form__grid">
+              <label>Organisation <span class="opt">optional</span><input name="org" autocomplete="organization"></label>
+              <label>Approx. hectares<input name="hectares" inputmode="decimal"></label>
+              <label class="full">The land is
+                <select name="status">
+                  <option>Untouched / greenfield</option>
+                  <option>An operating farm</option>
+                  <option>An orchard or plantation</option>
+                  <option>Being evaluated for purchase or lending</option>
+                </select>
+              </label>
+              <fieldset class="full">
+                <legend>Interested in</legend>
+                <label class="check"><input type="checkbox" name="interest" value="Site survey"> Site survey</label>
+                <label class="check"><input type="checkbox" name="interest" value="Crop intelligence"> Crop intelligence</label>
+                <label class="check"><input type="checkbox" name="interest" value="Groundwater"> Groundwater</label>
+                <label class="check"><input type="checkbox" name="interest" value="Farm design"> Farm design</label>
+                <label class="check"><input type="checkbox" name="interest" value="Watch"> Watch</label>
+              </fieldset>
+              <label class="full">Anything else<textarea name="message" rows="3"></textarea></label>
+              <label class="hp" aria-hidden="true">Leave empty<input name="_gotcha" tabindex="-1" autocomplete="off"></label>
+            </div>
+            <div class="form__actions">
+              <button class="btn btn--ghost" type="button" data-back>Back</button>
+              <button class="btn btn--primary" type="submit">Send enquiry</button>
+            </div>
+          </fieldset>
           <p class="form__status" role="status"></p>
         </form>
       </div>
     </section>
   </main>
+
+  <div class="actionbar" id="actionbar" aria-label="Quick contact">
+    <a class="btn btn--ghost" data-contact="whatsapp" target="_blank" rel="noopener" hidden>WhatsApp</a>
+    <a class="btn btn--primary" href="#contact">Book a site survey</a>
+  </div>
 
   <footer class="footer">
     <div class="wrap footer__inner">
@@ -494,6 +650,8 @@
       <nav class="footer__links" aria-label="Footer">
         <a class="mono" data-contact="email" hidden><span data-value></span></a>
         <a class="mono" href="careers.html">Careers</a>
+        <a class="mono" href="platform.html">Watch platform demo</a>
+        <button class="lite-switch mono" id="lite-switch" type="button" role="switch" aria-checked="false">Low-data mode: <span data-state>Off</span></button>
         <a class="mono" href="#top">Back to top ↑</a>
       </nav>
     </div>

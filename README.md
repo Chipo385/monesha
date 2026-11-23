@@ -33,12 +33,15 @@ Both forms validate fields inline and carry a hidden spam trap (`_gotcha`).
 ```
 index.html            home page markup and copy
 careers.html          careers page: values, roles, hiring process, application form
+platform.html         Watch platform demo: KPIs, farm map, alerts, vigour chart, fields, visits
 404.html              not-found page (paths assume the site lives at /monesha/)
-css/styles.css        design tokens + all styles
+css/styles.css        design tokens (dark + light "survey sheet" theme) and site styles
+css/platform.css      platform demo styles
 js/config.js          contact email, WhatsApp number, form endpoint
 js/common.js          shared: nav (active section, mobile menu), reveal, contact links, forms
 js/main.js            home page: twin controls, sliders, crop fit, alerts, before/after
 js/careers.js         careers page: role filter, apply buttons
+js/platform.js        platform demo: simulated season data, chart, tables, map
 js/scenes.js          Three.js: shared farm model + hero twin, groundwater block,
                       satellite (Watch) view, pivot engineering view, outcome renders
 js/detail.js          trees, farmyard equipment, lighting, and the low-power quality tier
@@ -47,9 +50,10 @@ js/suitability.js     illustrative crop scoring model
 assets/logo.svg       favicon (depth aperture on a dark tile)
 assets/icons/         PNG app icons (generated)
 assets/og.jpg         social preview card, 1200×630 (generated)
+assets/renders/       poster stills of each 3D view and the before/after pair (generated)
 assets/logo/          logo files and concepts (open index.html to compare)
 site.webmanifest, robots.txt, sitemap.xml
-tools/                og.html + icon.html and build-assets.sh, which renders them to PNG/JPG
+tools/                og.html, icon.html, render.html and build-assets.sh, which renders them
 docs/BRIEF.md         brand, content and confidentiality rules
 docs/BUSINESS.md      business plan (internal: on this drive only, ignored by git)
 reference/            old Stitch export and AI renders (local only, not in git)
@@ -67,9 +71,28 @@ scattered woodland with wider crowns, and smaller outcome renders — about a qu
 the desktop triangle count. Every view also lowers its resolution on its own if frames
 stay slow.
 
-## Regenerating the preview image and icons
+## Low-data mode
 
-After changing the logo or the hero scene, with the local server running:
+Poster stills (`assets/renders/`) show instantly in every 3D view. The live 3D (about 1 MB)
+loads after first paint, unless the visitor has Data Saver on, is on a 2G/3G connection,
+or has switched on "Low-data mode" in the footer. Then the stills stay and each view has a
+"Load 3D" button. The before/after comparison always uses the stills.
+
+## Design system notes
+
+- **Data colours** read by lightness, not hue, so they work with colour-blindness:
+  crop vigour runs light straw → deep green, moisture sand → deep blue. Chart series use
+  three validated hues (blue, orange, aqua), always with a legend and direct labels.
+- **Status** (on track / watch / act now) always pairs an icon and a word with the colour.
+- **Type**: Inter Tight for text and labels; JetBrains Mono only for data and figures;
+  Instrument Serif italic for one emphasised phrase per heading.
+- **Earth palette** (`--laterite`, `--miombo`, `--river`, `--grass`) for illustration and
+  print, never for encoding data. **Light theme**: add `data-theme="sheet"` (used for the
+  report sample and the platform's Light switch).
+
+## Regenerating the preview image, icons and posters
+
+After changing the logo or any 3D scene, with the local server running:
 
 ```bash
 ./tools/build-assets.sh
@@ -83,7 +106,9 @@ replace that address, set `<base href="/">` in `404.html`, and add a `CNAME` fil
 
 ## To do before going live
 
-- Fill in `js/config.js` (at minimum `email`).
+- Fill in `js/config.js` (at minimum `email`, ideally `whatsapp` too).
+- Team photos and credentials for the About section (real people build trust when there are no testimonials yet).
+- Price guidance ("from K… per hectare") once rates are set; the pricing note says how pricing works but gives no figures.
 - **Imagery**: every farm visual is rendered live from one simulated farm, so the site is
   consistent and has no stock photos. Once real projects exist, add real survey outputs
   (with client permission) alongside the simulations.

@@ -10,6 +10,9 @@ const LIGHT_DIR = new THREE.Vector3(-0.5, 0.9, 0.35).normalize();
 export const LOW = (() => {
   const mq = (q) => window.matchMedia(q).matches;
   const cores = navigator.hardwareConcurrency || 8, mem = navigator.deviceMemory || 8;
+  const q = new URLSearchParams(location.search).get('quality');
+  if (q === 'high') return false;
+  if (q === 'low') return true;
   return mq('(pointer: coarse)') || Math.min(screen.width, screen.height) < 700 || cores <= 4 || mem <= 4;
 })();
 

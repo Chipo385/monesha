@@ -40,7 +40,7 @@ function initNav() {
       if (e.key === 'Escape' && !menu.hidden) { set(false); toggle.focus(); }
     });
     document.addEventListener('click', (e) => { if (!menu.hidden && !nav.contains(e.target)) set(false); });
-    window.matchMedia('(min-width: 961px)').addEventListener('change', (e) => { if (e.matches) set(false); });
+    window.matchMedia("(min-width: 1121px)").addEventListener('change', (e) => { if (e.matches) set(false); });
   }
 
   // Highlight the section in view

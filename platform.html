@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en" class="no-js">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Watch platform demo — Monesha Precision Tech</title>
+  <meta name="description" content="A demo of the Monesha Watch platform: farm map, alerts, crop vigour by field, reports and field visits. Simulated data.">
+  <meta name="theme-color" content="#0b0d0c">
+  <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+  <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="canonical" href="https://chipo385.github.io/monesha/platform.html">
+  <link rel="manifest" href="site.webmanifest">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Watch platform demo — Monesha Precision Tech">
+  <meta property="og:description" content="Farm map, alerts, crop vigour by field, reports and field visits, on one platform. Simulated data.">
+  <meta property="og:image" content="https://chipo385.github.io/monesha/assets/og.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <script>document.documentElement.className = document.documentElement.className.replace("no-js", "js");</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/platform.css">
+  <script type="importmap">
+    { "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    } }
+  </script>
+</head>
+<body class="app">
+  <a class="skip" href="#main">Skip to content</a>
+  <div class="demo-banner" role="note">Demo of the Watch platform · simulated farm and data · <a href="index.html#contact">Book a site survey</a></div>
+
+  <header class="app__top">
+    <a class="brand" href="index.html" aria-label="Monesha Precision Tech home">
+      <svg class="brand__mark" viewBox="0 0 48 48" fill="none" aria-hidden="true"><circle cx="24" cy="24" r="20.5" stroke="currentColor" stroke-width="2.6"/><circle cx="26.2" cy="22.2" r="14" stroke="currentColor" stroke-width="2.4" opacity=".75"/><circle cx="28.2" cy="20.6" r="8.2" stroke="currentColor" stroke-width="2.2" opacity=".55"/><circle cx="29.6" cy="19.5" r="3.4" class="brand__dot"/></svg>
+      <span class="brand__word">MONESHA<small>WATCH</small></span>
+    </a>
+    <div class="app__farm">
+      <span class="app__farm-name">Example Farm</span>
+      <span class="app__farm-meta">Central Province · 576 ha · <span id="season-day"></span></span>
+    </div>
+    <button class="theme-btn" id="theme-btn" type="button" aria-pressed="false" title="Switch between dark and light">Light</button>
+  </header>
+
+  <nav class="app__nav" aria-label="Platform sections">
+    <a href="#overview" aria-current="true">Overview</a>
+    <a href="#map">Map</a>
+    <a href="#alerts">Alerts <span class="count" id="alert-count"></span></a>
+    <a href="#fields">Fields</a>
+    <a href="#visits">Visits &amp; reports</a>
+  </nav>
+
+  <main id="main" class="app__main">
+    <section id="overview" class="kpis" aria-label="This week">
+      <article class="kpi">
+        <h2>Mean crop vigour</h2>
+        <p class="kpi__v"><span id="k-ndvi">—</span><small>NDVI</small></p>
+        <p class="kpi__d" id="k-ndvi-d"></p>
+      </article>
+      <article class="kpi">
+        <h2>Area needing attention</h2>
+        <p class="kpi__v"><span id="k-flag">—</span><small>ha</small></p>
+        <p class="kpi__d" id="k-flag-d"></p>
+      </article>
+      <article class="kpi">
+        <h2>Rain, last 7 days</h2>
+        <p class="kpi__v"><span id="k-rain">—</span><small>mm</small></p>
+        <p class="kpi__d" id="k-rain-d"></p>
+      </article>
+      <article class="kpi">
+        <h2>Next field visit</h2>
+        <p class="kpi__v kpi__v--text" id="k-visit">—</p>
+        <p class="kpi__d" id="k-visit-d"></p>
+      </article>
+    </section>
+
+    <div class="app__grid">
+      <section id="map" class="panel panel--map" aria-labelledby="map-title">
+        <header class="panel__head">
+          <h2 id="map-title">Farm map</h2>
+          <div class="chips" role="group" aria-label="Map layer">
+            <button class="chip is-on" data-sky="terrain" aria-pressed="true">True colour</button>
+            <button class="chip" data-sky="ndvi" aria-pressed="false">Crop vigour</button>
+            <button class="chip" data-sky="water" aria-pressed="false">Soil moisture</button>
+          </div>
+        </header>
+        <div class="sky is-loading" id="sky" data-label="Loading the farm map">
+          <img class="poster" src="assets/renders/sky.jpg" alt="">
+          <canvas id="watch-canvas" role="img" aria-label="The farm from above with alert markers."></canvas>
+          <div class="sky__pins" id="sky-pins" aria-hidden="true"></div>
+        </div>
+        <ul class="legend legend--flat map-legend" id="map-legend" aria-live="polite"></ul>
+      </section>
+
+      <section id="alerts" class="panel" aria-labelledby="alerts-title">
+        <header class="panel__head">
+          <h2 id="alerts-title">Alerts</h2>
+          <span class="panel__meta" id="alerts-meta"></span>
+        </header>
+        <ul class="alerts" id="alert-list"></ul>
+      </section>
+
+      <section id="trend" class="panel panel--wide" aria-labelledby="trend-title">
+        <header class="panel__head">
+          <div>
+            <h2 id="trend-title">Crop vigour this season</h2>
+            <p class="panel__sub">Mean NDVI by field, weekly satellite passes</p>
+          </div>
+          <button class="chip" id="trend-table-btn" aria-pressed="false" aria-controls="trend-table">Show as table</button>
+        </header>
+        <div class="chart" id="trend-chart"></div>
+        <div class="table-wrap" id="trend-table" hidden></div>
+      </section>
+
+      <section id="fields" class="panel panel--wide" aria-labelledby="fields-title">
+        <header class="panel__head">
+          <h2 id="fields-title">Fields</h2>
+          <span class="panel__meta" id="fields-meta"></span>
+        </header>
+        <div class="table-wrap">
+          <table class="fields fields--cards">
+            <thead><tr><th scope="col">Field</th><th scope="col">Crop</th><th scope="col" class="num">Area</th><th scope="col" class="num">NDVI</th><th scope="col">Last 6 weeks</th><th scope="col">Status</th></tr></thead>
+            <tbody id="field-rows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="visits" class="panel" aria-labelledby="visits-title">
+        <header class="panel__head"><h2 id="visits-title">Field visits</h2></header>
+        <ol class="visits" id="visit-list"></ol>
+      </section>
+
+      <section class="panel" aria-labelledby="reports-title">
+        <header class="panel__head"><h2 id="reports-title">Reports</h2></header>
+        <ul class="reports" id="report-list"></ul>
+      </section>
+    </div>
+    <p class="app__foot">This is a demonstration with simulated data. Your farm’s platform shows your own land, surveys and alerts. <a class="link-arrow" href="index.html#contact">Talk to us</a></p>
+  </main>
+
+  <div class="tip" id="tip" role="status" hidden></div>
+  <script type="module" src="js/platform.js"></script>
+</body>
+</html>
