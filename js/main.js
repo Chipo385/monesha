@@ -149,6 +149,7 @@ $('[data-pin-here]', form).addEventListener('click', () => {
 });
 
 bindForm(form, {
+  onSent: () => { goStep(1); lat.value = lng.value = ''; pinVal.textContent = ''; marker?.remove(); marker = null; },
   subject: (d) => `Site survey enquiry: ${d.get('location')}`,
   summary: (d) => [
     `Name: ${d.get('name')}`, `Phone: ${d.get('phone')}`, `Email: ${d.get('email') || '-'}`,

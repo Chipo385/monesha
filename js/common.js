@@ -85,7 +85,7 @@ function initContactLinks() {
  * With CONFIG.email: open the visitor's mail app with the summary.
  * With neither: copy the summary to the clipboard and show it.
  */
-export function bindForm(form, { subject, summary }) {
+export function bindForm(form, { subject, summary, onSent }) {
   if (!form) return;
   const status = $('.form__status', form);
   const button = $('button[type="submit"]', form);
@@ -143,6 +143,7 @@ export function bindForm(form, { subject, summary }) {
         });
         if (!res.ok) throw new Error(String(res.status));
         form.reset();
+        onSent?.();
         status.dataset.tone = 'ok';
         status.textContent = 'Thank you. We have your message and will reply within two working days.';
       } catch {

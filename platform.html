@@ -31,7 +31,7 @@
 </head>
 <body class="app">
   <a class="skip" href="#main">Skip to content</a>
-  <div class="demo-banner" role="note">Demo of the Watch platform · simulated farm and data · <a href="index.html#contact">Book a site survey</a></div>
+  <aside class="demo-banner" aria-label="Demo notice">Demo of the Watch platform · simulated farm and data · <a href="index.html#contact">Book a site survey</a></aside>
 
   <header class="app__top">
     <a class="brand" href="index.html" aria-label="Monesha Precision Tech home">
@@ -39,7 +39,7 @@
       <span class="brand__word">MONESHA<small>WATCH</small></span>
     </a>
     <div class="app__farm">
-      <span class="app__farm-name">Example Farm</span>
+      <h1 class="app__farm-name">Example Farm</h1>
       <span class="app__farm-meta">Central Province · 576 ha · <span id="season-day"></span></span>
     </div>
     <button class="theme-btn" id="theme-btn" type="button" aria-pressed="false" title="Switch between dark and light">Light</button>
@@ -88,7 +88,7 @@
           </div>
         </header>
         <div class="sky is-loading" id="sky" data-label="Loading the farm map">
-          <img class="poster" src="assets/renders/sky.jpg" alt="">
+          <img class="poster" src="assets/renders/sky.webp" alt="">
           <canvas id="watch-canvas" role="img" aria-label="The farm from above with alert markers."></canvas>
           <div class="sky__pins" id="sky-pins" aria-hidden="true"></div>
         </div>

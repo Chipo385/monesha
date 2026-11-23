@@ -718,3 +718,9 @@ input[type="range"]::-moz-range-thumb { width: 12px; height: 12px; border-radius
   .story__step p { font-size: 16px; }
 }
 .no-webgl .story__frame canvas { display: none; }
+
+/* Story chapters: full-contrast text; the active chapter is marked by an accent bar */
+.story__step { opacity: 1; border-left: 2px solid var(--line-2); padding-left: 22px; transition: border-color .4s; }
+.story__step.is-on { border-left-color: var(--accent); }
+.story__step:not(.is-on) h3 { color: var(--ink-2); }
+.watch__cta { margin: 40px 0 0; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; color: var(--ink-3); font-size: 14px; }

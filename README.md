@@ -51,7 +51,7 @@ js/suitability.js     illustrative crop scoring model
 assets/logo.svg       favicon (depth aperture on a dark tile)
 assets/icons/         PNG app icons (generated)
 assets/og.jpg         social preview card, 1200×630 (generated)
-assets/renders/       poster stills of each 3D view and the before/after pair (generated)
+assets/renders/       WebP stills of each 3D view, story chapter and before/after (generated)
 assets/logo/          logo files and concepts (open index.html to compare)
 site.webmanifest, robots.txt, sitemap.xml
 tools/                og.html, icon.html, render.html and build-assets.sh, which renders them

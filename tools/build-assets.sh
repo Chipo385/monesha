@@ -32,7 +32,7 @@ for size, name in [(512, "icon-512.png"), (192, "icon-192.png"), (180, "apple-to
 import os
 os.makedirs("assets/renders", exist_ok=True)
 for n in ["hero", "aquifer", "eng", "sky", "before", "after", "story-1", "story-2", "story-3", "story-4"]:
-    Image.open(f"{t}/{n}.png").convert("RGB").save(f"assets/renders/{n}.jpg", quality=80, optimize=True, progressive=True)
+    Image.open(f"{t}/{n}.png").convert("RGB").save(f"assets/renders/{n}.webp", quality=74, method=6)
 print("assets/og.jpg, assets/icons/ and assets/renders/ updated")
 PY
 rm -rf "$TMP"

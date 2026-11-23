@@ -82,7 +82,7 @@
     <!-- HERO: interactive digital twin -->
     <section class="hero" id="twin" aria-labelledby="hero-title">
       <div class="hero__stage is-loading" data-label="Building the digital twin">
-        <img class="poster" src="assets/renders/hero.jpg" alt="" fetchpriority="high">
+        <img class="poster" src="assets/renders/hero.webp" alt="" fetchpriority="high">
         <canvas id="hero-canvas" aria-label="Interactive 3D model of a farm site. Drag to rotate." role="img"></canvas>
         <div class="hero__fade" aria-hidden="true"></div>
       </div>
@@ -180,10 +180,10 @@
       <div class="wrap story__body">
         <div class="story__stage">
           <div class="story__frame is-loading" data-label="Building the twin">
-            <img class="story__still is-active" data-still="0" src="assets/renders/story-1.jpg" alt="" loading="lazy">
-            <img class="story__still" data-still="1" src="assets/renders/story-2.jpg" alt="" loading="lazy">
-            <img class="story__still" data-still="2" src="assets/renders/story-3.jpg" alt="" loading="lazy">
-            <img class="story__still" data-still="3" src="assets/renders/story-4.jpg" alt="" loading="lazy">
+            <img class="story__still is-active" data-still="0" src="assets/renders/story-1.webp" alt="" loading="lazy">
+            <img class="story__still" data-still="1" src="assets/renders/story-2.webp" alt="" loading="lazy">
+            <img class="story__still" data-still="2" src="assets/renders/story-3.webp" alt="" loading="lazy">
+            <img class="story__still" data-still="3" src="assets/renders/story-4.webp" alt="" loading="lazy">
             <button class="load3d" type="button" data-load3d>Load 3D view</button>
             <canvas id="story-canvas" role="img" aria-label="The same farm in 3D, changing with each step of the method: surveyed, modelled for water, engineered, then watched from above."></canvas>
             <div class="story__hud" aria-hidden="true">
@@ -243,7 +243,7 @@
         <figure class="viewer" aria-labelledby="water-cap">
           <div class="viewer__bar mono"><span>Subsurface model · 0 to −46 m</span><span class="tag">Illustrative</span></div>
           <div class="viewer__canvas is-loading" data-label="Building the subsurface model">
-            <img class="poster" src="assets/renders/aquifer.jpg" alt="" loading="lazy">
+            <img class="poster" src="assets/renders/aquifer.webp" alt="" loading="lazy">
             <button class="load3d" type="button" data-load3d>Load 3D view</button>
             <canvas id="aquifer-canvas" role="img" aria-label="3D geological block showing strata, water table, a fracture zone and two boreholes."></canvas>
             <div class="viewer__tools">
@@ -328,7 +328,7 @@
         <figure class="viewer" aria-labelledby="eng-cap">
           <div class="viewer__bar mono"><span>Pivot 1 · designed on the surveyed terrain</span><span class="tag">Simulated</span></div>
           <div class="viewer__canvas is-loading" data-label="Laying the pivot on the terrain">
-            <img class="poster" src="assets/renders/eng.jpg" alt="" loading="lazy">
+            <img class="poster" src="assets/renders/eng.webp" alt="" loading="lazy">
             <button class="load3d" type="button" data-load3d>Load 3D view</button>
             <canvas id="eng-canvas" role="img" aria-label="3D centre pivot following the slopes of the farm, coloured by height above or below the pivot point."></canvas>
             <div class="viewer__tools">
@@ -372,7 +372,7 @@
           <figure class="viewer viewer--sky" aria-labelledby="sky-cap">
             <div class="viewer__bar mono"><span>Satellite view · Day 45</span><span class="tag">Simulated</span></div>
             <div class="sky is-loading" id="sky" data-label="Rendering the satellite view">
-              <img class="poster" src="assets/renders/sky.jpg" alt="" loading="lazy">
+              <img class="poster" src="assets/renders/sky.webp" alt="" loading="lazy">
               <button class="load3d" type="button" data-load3d>Load 3D view</button>
             <canvas id="watch-canvas" role="img" aria-label="The farm seen from above in true colour, with alert markers."></canvas>
               <div class="sky__scan" aria-hidden="true"></div>
@@ -406,6 +406,7 @@
           <li><h3>Yield and risk forecasts</h3><p>Season-long models of crop development, water demand and harvest timing, updated with every new observation.</p></li>
           <li><h3>Field assessments</h3><p>For commercial estates, a physical inspection every two to three weeks, reported against the twin.</p></li>
         </ul>
+        <p class="watch__cta"><a class="btn btn--ghost" href="platform.html">Open the Watch platform demo</a><span>Map, alerts, field trends and reports, as a client sees them. Simulated data.</span></p>
       </div>
     </section>
 
@@ -418,8 +419,8 @@
           <p>Owners, boards and lenders see the end state of the investment, and the evidence behind it, before ground is broken.</p>
         </header>
         <div class="ba" id="ba" style="--pos:50%">
-          <img id="ba-after" src="assets/renders/after.jpg" loading="lazy" alt="Planned: the same land laid out as a farm with fields and two centre pivots" width="1600" height="820">
-          <div class="ba__before"><img id="ba-before" src="assets/renders/before.jpg" loading="lazy" alt="Today: untouched bush and river valley" width="1600" height="820"></div>
+          <img id="ba-after" src="assets/renders/after.webp" loading="lazy" alt="Planned: the same land laid out as a farm with fields and two centre pivots" width="1600" height="820">
+          <div class="ba__before"><img id="ba-before" src="assets/renders/before.webp" loading="lazy" alt="Today: untouched bush and river valley" width="1600" height="820"></div>
           <span class="ba__label ba__label--l mono">Today<span class="ba__more"> · untouched land</span></span>
           <span class="ba__label ba__label--r mono">Planned<span class="ba__more"> · designed farm</span></span>
           <div class="ba__handle" aria-hidden="true"></div>
@@ -464,7 +465,7 @@
               <article class="sheet sheet--back" aria-hidden="true">
                 <header class="sheet__run"><span>Section 3 · Groundwater</span><span>p. 14</span></header>
                 <h4>3.2 Borehole targets</h4>
-                <img src="assets/renders/aquifer.jpg" alt="" loading="lazy">
+                <img src="assets/renders/aquifer.webp" alt="" loading="lazy">
                 <table>
                   <thead><tr><th>Target</th><th>Structure</th><th>Drill to</th><th>Confidence</th></tr></thead>
                   <tbody>
@@ -478,7 +479,7 @@
                 <header class="sheet__brand"><svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><circle cx="24" cy="24" r="20.5" stroke="currentColor" stroke-width="2.6"/><circle cx="26.2" cy="22.2" r="14" stroke="currentColor" stroke-width="2.4" opacity=".75"/><circle cx="28.2" cy="20.6" r="8.2" stroke="currentColor" stroke-width="2.2" opacity=".55"/><circle cx="29.6" cy="19.5" r="3.4" class="brand__dot"/></svg><span>MONESHA<small>PRECISION TECH</small></span></header>
                 <p class="sheet__kicker">Site baseline &amp; development plan</p>
                 <h4 class="sheet__title">Example site, Central Province</h4>
-                <img src="assets/renders/sky.jpg" alt="" loading="lazy">
+                <img src="assets/renders/sky.webp" alt="" loading="lazy">
                 <dl class="sheet__facts">
                   <div><dt>Area surveyed</dt><dd>576 ha</dd></div>
                   <div><dt>Arable after buffers</dt><dd>273 ha</dd></div>
