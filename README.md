@@ -42,7 +42,8 @@ js/common.js          shared: nav (active section, mobile menu), reveal, contact
 js/main.js            home page: twin controls, sliders, crop fit, alerts, before/after
 js/careers.js         careers page: role filter, apply buttons
 js/platform.js        platform demo: simulated season data, chart, tables, map
-js/scenes.js          Three.js: shared farm model + hero twin, groundwater block,
+js/scenes.js          Three.js: shared farm model + hero twin, method story (one twin,
+                      four camera stops), groundwater block,
                       satellite (Watch) view, pivot engineering view, outcome renders
 js/detail.js          trees, farmyard equipment, lighting, and the low-power quality tier
 js/terrain.js         procedural landscape: noise, river carving, erosion, drainage, parcels
@@ -74,7 +75,7 @@ stay slow.
 ## Low-data mode
 
 Poster stills (`assets/renders/`) show instantly in every 3D view. The live 3D (about 1 MB)
-loads after first paint, unless the visitor has Data Saver on, is on a 2G/3G connection,
+loads after first paint, unless the visitor has Data Saver on, is on a 2G connection,
 or has switched on "Low-data mode" in the footer. Then the stills stay and each view has a
 "Load 3D" button. The before/after comparison always uses the stills.
 

@@ -18,6 +18,7 @@ shot "$URL/tools/render.html?view=hero&quality=high" 1600 900 "$TMP/hero.png"
 shot "$URL/tools/render.html?view=aquifer&quality=high" 1000 825 "$TMP/aquifer.png"
 shot "$URL/tools/render.html?view=eng&quality=high" 1000 825 "$TMP/eng.png"
 shot "$URL/tools/render.html?view=sky&quality=high" 1000 1000 "$TMP/sky.png"
+for n in 1 2 3 4; do shot "$URL/tools/render.html?view=story&step=$((n - 1))&quality=high" 1200 1000 "$TMP/story-$n.png"; done
 shot "$URL/tools/render.html?view=before&quality=high" 1600 820 "$TMP/before.png"
 shot "$URL/tools/render.html?view=after&quality=high" 1600 820 "$TMP/after.png"
 python3 -I - "$TMP" <<'PY'
@@ -30,7 +31,7 @@ for size, name in [(512, "icon-512.png"), (192, "icon-192.png"), (180, "apple-to
     icon.resize((size, size), Image.LANCZOS).save(f"assets/icons/{name}", optimize=True)
 import os
 os.makedirs("assets/renders", exist_ok=True)
-for n in ["hero", "aquifer", "eng", "sky", "before", "after"]:
+for n in ["hero", "aquifer", "eng", "sky", "before", "after", "story-1", "story-2", "story-3", "story-4"]:
     Image.open(f"{t}/{n}.png").convert("RGB").save(f"assets/renders/{n}.jpg", quality=80, optimize=True, progressive=True)
 print("assets/og.jpg, assets/icons/ and assets/renders/ updated")
 PY

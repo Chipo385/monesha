@@ -15,7 +15,7 @@ const DPR = () => Math.min(window.devicePixelRatio || 1, LOW ? 1.5 : 2);
 /* Shared viewer                                                       */
 /* ------------------------------------------------------------------ */
 
-function createViewer(canvas, { camPos, target = [0, 0, 0], autoRotate = 0.35, minDist = 6, maxDist = 22 }) {
+function createViewer(canvas, { camPos, target = [0, 0, 0], autoRotate = 0.35, minDist = 6, maxDist = 22, orbit = true }) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
   renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
   let pixelRatio = DPR();
@@ -26,7 +26,7 @@ function createViewer(canvas, { camPos, target = [0, 0, 0], autoRotate = 0.35, m
   const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 200);
   camera.position.set(...camPos);
 
-  const controls = new OrbitControls(camera, canvas);
+  const controls = orbit ? new OrbitControls(camera, canvas) : { target: new THREE.Vector3(), update() {}, addEventListener() {} };
   controls.target.set(...target);
   controls.enableDamping = true;
   controls.dampingFactor = 0.06;
@@ -38,7 +38,7 @@ function createViewer(canvas, { camPos, target = [0, 0, 0], autoRotate = 0.35, m
   controls.autoRotate = !REDUCED_MOTION && autoRotate > 0;
   controls.autoRotateSpeed = autoRotate;
   // On touch screens, rotation is opt-in so a swipe still scrolls the page.
-  if (COARSE) { controls.enabled = false; canvas.style.touchAction = 'pan-y'; }
+  if (COARSE || !orbit) { controls.enabled = false; canvas.style.touchAction = 'pan-y'; }
   controls.addEventListener('start', () => { controls.autoRotate = false; });
 
   const tickers = [];
@@ -114,6 +114,7 @@ function terrainMaterial({ contour = 0.12, contourAlpha = 0.22, alpha = 1, side 
       uAlpha: { value: alpha },
       uAmb: { value: ambient },
       uRing: { value: ring },
+      uFarm: { value: 1 },
       uFog: { value: new THREE.Color(0x0b0d0c) },
       uFogNear: { value: fog[0] },
       uFogFar: { value: fog[1] },
@@ -137,7 +138,7 @@ function terrainMaterial({ contour = 0.12, contourAlpha = 0.22, alpha = 1, side 
       }`,
     fragmentShader: /* glsl */`
       uniform vec3 uLight; uniform float uContour; uniform float uContourAlpha; uniform float uAlpha; uniform float uAmb;
-      uniform vec3 uFog; uniform float uFogNear; uniform float uFogFar; uniform float uRing;
+      uniform vec3 uFog; uniform float uFogNear; uniform float uFogFar; uniform float uRing; uniform float uFarm;
       varying vec3 vColor; varying vec3 vN; varying float vH; varying vec3 vW;
       float lineAt(float x) { float f = abs(fract(x - 0.5) - 0.5) / max(fwidth(x), 1e-4); return 1.0 - min(f, 1.0); }
       #ifdef USE_DETAIL
@@ -160,7 +161,9 @@ function terrainMaterial({ contour = 0.12, contourAlpha = 0.22, alpha = 1, side 
         float nearF = 1.0 - smoothstep(2.5, 14.0, dist);
         float n1 = vnoise(vW.xz * 45.0), n2 = vnoise(vW.xz * 190.0);
         base *= 0.87 + 0.26 * mix(n1, 0.5 * n1 + 0.5 * n2, nearF);
-        if (vKind > 0.5 && vKind < 1.5) {
+        if (uFarm < 0.5) {
+          // land not yet farmed: no tramlines or wheel tracks
+        } else if (vKind > 0.5 && vKind < 1.5) {
           base *= 1.0 - 0.26 * lineAt(vRow / 0.1);
           base *= 1.0 - 0.12 * lineAt(vRow / 0.0125) * nearF;
         } else if (vKind > 1.5 && vKind < 2.5) {
@@ -460,6 +463,37 @@ export function getFarm() {
 
   FARM = { N, W, VS, L, inPivot, health, heightAt, groundY, toWorld, colorsFor, mesh, skirt, yard, trees, ringSpacing, addDetail };
   return FARM;
+}
+
+/** Alert locations, chosen from the farm data itself (shared by the Watch view and the story). */
+function farmAlerts(farm) {
+  const { N, L, inPivot, health } = farm;
+  // Alert locations come from the farm data itself
+  // Each alert takes the best-scoring cell that is not too close to one already placed,
+  // so markers and their labels never sit on top of each other.
+  const taken = [];
+  const pick = (score) => {
+    let best = -Infinity, bk = 0;
+    for (let j = 8; j < N - 8; j += 2) for (let i = 8; i < N - 8; i += 2) {
+      const u = i / (N - 1), v = j / (N - 1);
+      if (taken.some((t) => Math.abs(t.v - v) < 0.07 && Math.abs(t.u - u) < 0.22)) continue;
+      const k = j * N + i, s = score(k);
+      if (s > best) { best = s; bk = k; }
+    }
+    const at = { u: (bk % N) / (N - 1), v: Math.floor(bk / N) / (N - 1) };
+    taken.push(at);
+    return at;
+  };
+  const isField = (k) => L.field[k] >= 0 && inPivot[k] < 0;
+  const pestPivot = L.pivots.length > 1 ? 1 : 0;
+  return [
+    { k: 'flood', label: 'Flood', ...pick((k) => L.riverMask[k] > 0.3 ? -1 : Math.max(0, L.moisture[k] - 0.55) * (1 - L.h[k])) },
+    { k: 'fire', label: 'Fire', ...pick((k) => (L.field[k] >= 0 || inPivot[k] >= 0 || L.riverMask[k] > 0.2) ? -1 : (1 - L.moisture[k]) * (0.7 + L.slope[k]) * L.h[k]) },
+    { k: 'pest', label: 'Pest', ...pick((k) => inPivot[k] === pestPivot ? 1 - health[k] : -1) },
+    { k: 'disease', label: 'Disease', ...pick((k) => isField(k) ? 1 - health[k] : -1) },
+    { k: 'wind', label: 'Wind', ...pick((k) => isField(k) ? L.h[k] : -1) },
+    { k: 'change', label: 'Change', ...pick((k) => { const u = (k % N) / (N - 1); return (u > 0.82 && L.field[k] < 0 && L.riverMask[k] < 0.2) ? u - L.slope[k] * 0.1 : -1; }) },
+  ];
 }
 
 /* Centre-pivot model that follows the ground: towers, truss, drops and spray. */
@@ -852,32 +886,7 @@ export function initWatch(canvas, { layer = 'terrain', stage = 2 } = {}) {
   new ResizeObserver(render).observe(canvas);
   render();
 
-  // Alert locations come from the farm data itself
-  // Each alert takes the best-scoring cell that is not too close to one already placed,
-  // so markers and their labels never sit on top of each other.
-  const taken = [];
-  const pick = (score) => {
-    let best = -Infinity, bk = 0;
-    for (let j = 8; j < N - 8; j += 2) for (let i = 8; i < N - 8; i += 2) {
-      const u = i / (N - 1), v = j / (N - 1);
-      if (taken.some((t) => Math.abs(t.v - v) < 0.07 && Math.abs(t.u - u) < 0.22)) continue;
-      const k = j * N + i, s = score(k);
-      if (s > best) { best = s; bk = k; }
-    }
-    const at = { u: (bk % N) / (N - 1), v: Math.floor(bk / N) / (N - 1) };
-    taken.push(at);
-    return at;
-  };
-  const isField = (k) => L.field[k] >= 0 && inPivot[k] < 0;
-  const pestPivot = L.pivots.length > 1 ? 1 : 0;
-  const alerts = [
-    { k: 'flood', label: 'Flood', ...pick((k) => L.riverMask[k] > 0.3 ? -1 : Math.max(0, L.moisture[k] - 0.55) * (1 - L.h[k])) },
-    { k: 'fire', label: 'Fire', ...pick((k) => (L.field[k] >= 0 || inPivot[k] >= 0 || L.riverMask[k] > 0.2) ? -1 : (1 - L.moisture[k]) * (0.7 + L.slope[k]) * L.h[k]) },
-    { k: 'pest', label: 'Pest', ...pick((k) => inPivot[k] === pestPivot ? 1 - health[k] : -1) },
-    { k: 'disease', label: 'Disease', ...pick((k) => isField(k) ? 1 - health[k] : -1) },
-    { k: 'wind', label: 'Wind', ...pick((k) => isField(k) ? L.h[k] : -1) },
-    { k: 'change', label: 'Change', ...pick((k) => { const u = (k % N) / (N - 1); return (u > 0.82 && L.field[k] < 0 && L.riverMask[k] < 0.2) ? u - L.slope[k] * 0.1 : -1; }) },
-  ];
+  const alerts = farmAlerts(farm);
 
   return {
     alerts,
@@ -986,6 +995,7 @@ export function renderOutcome(beforeImg, afterImg, { width = LOW ? 1100 : 1600, 
   scene.add(mesh, farm.skirt());
   addLights(scene, [11, 24]);
   const det = farm.addDetail(scene, { preclear: true, planted: false, farmyard: false });
+  mat.uniforms.uFarm.value = 0;
   renderer.render(scene, cam);
   beforeImg.src = canvas.toDataURL('image/jpeg', 0.88);
 
@@ -1000,9 +1010,211 @@ export function renderOutcome(beforeImg, afterImg, { width = LOW ? 1100 : 1600, 
     scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(ring), new THREE.LineBasicMaterial({ color: 0xc6f36b, transparent: true, opacity: 0.8 })));
   });
   det.preclear.visible = false;
+  mat.uniforms.uFarm.value = 1;
   det.orchard.visible = det.plantation.visible = det.yard.visible = true;
   renderer.render(scene, cam);
   afterImg.src = canvas.toDataURL('image/jpeg', 0.88);
   renderer.dispose();
   renderer.forceContextLoss();
+}
+
+/* ------------------------------------------------------------------ */
+/* Story: one twin, four camera stops (Survey, Model, Engineer, Watch) */
+/* ------------------------------------------------------------------ */
+
+const ALERT_COLORS = { flood: 0x48a8e8, fire: 0xff5a4a, pest: 0xff8a3d, disease: 0xff8a3d, wind: 0xb9c3ff, change: 0xc6f36b };
+
+export function initStory(canvas) {
+  const farm = getFarm();
+  const { N, W, VS, L, inPivot, groundY } = farm;
+  const viewer = createViewer(canvas, { camPos: [9.5, 7.2, 10.5], target: [0, 0.2, 0], autoRotate: 0, orbit: false });
+  const { scene, camera, controls } = viewer;
+
+  // Terrain whose colours blend between chapters
+  const colors = new Float32Array(N * N * 3);
+  let target = colors, blending = false;
+  const mat = terrainMaterial({ contour: 0.085, contourAlpha: 0.1, fog: [18, 42], detail: true, ring: farm.ringSpacing });
+  const terrain = farm.mesh(colors, mat);
+  scene.add(terrain, farm.skirt());
+  addLights(scene, [18, 42]);
+  const det = farm.addDetail(scene, { preclear: true, planted: false, farmyard: false });
+
+  const ring = (p, y, color, opacity) => {
+    const pts = [];
+    for (let a = 0; a <= 96; a++) pts.push(farm.toWorld(p.u + Math.cos(a / 96 * 6.2832) * p.r, p.v + Math.sin(a / 96 * 6.2832) * p.r, y));
+    return new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color, transparent: true, opacity }));
+  };
+
+  // 1 · Survey: lawn-mower flight lines, a survey aircraft flying them, soil sample points
+  const survey = new THREE.Group();
+  const alt = VS + 0.9, flight = [];
+  for (let r = 0; r < 12; r++) {
+    const z = (-0.45 + r / 11 * 0.9) * W;
+    const xs = r % 2 ? [0.45 * W, -0.45 * W] : [-0.45 * W, 0.45 * W];
+    flight.push(new THREE.Vector3(xs[0], alt, z), new THREE.Vector3(xs[1], alt, z));
+  }
+  const flightLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints(flight),
+    new THREE.LineDashedMaterial({ color: 0xffffff, dashSize: 0.18, gapSize: 0.12, transparent: true, opacity: 0.4 }));
+  flightLine.computeLineDistances();
+  survey.add(flightLine);
+  const craft = new THREE.Mesh(new THREE.SphereGeometry(0.09, 16, 12), new THREE.MeshBasicMaterial({ color: 0xc6f36b }));
+  const footprint = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.56, 48), new THREE.MeshBasicMaterial({ color: 0xc6f36b, transparent: true, opacity: 0.5, side: THREE.DoubleSide, depthWrite: false }));
+  footprint.rotation.x = -Math.PI / 2;
+  survey.add(craft, footprint);
+  const legLen = flight.slice(1).map((v, i) => v.distanceTo(flight[i]));
+  const pathLen = legLen.reduce((a, b) => a + b, 0);
+  const dotGeo = new THREE.SphereGeometry(0.045, 10, 8), dotMat = new THREE.MeshBasicMaterial({ color: 0xc6f36b });
+  for (let r = 0; r < 9; r++) for (let c = 0; c < 9; c++) {
+    const u = 0.08 + (c + 0.5 * (r % 2)) / 9 * 0.84, v = 0.08 + r / 8 * 0.84;
+    const k = Math.round(v * (N - 1)) * N + Math.round(u * (N - 1));
+    if (L.field[k] < 0 && inPivot[k] < 0) continue;
+    const m = new THREE.Mesh(dotGeo, dotMat);
+    m.position.copy(farm.toWorld(u, v, 0.05));
+    survey.add(m);
+  }
+  scene.add(survey);
+
+  // 2 · Model: borehole targets on the low, wet ground near the river
+  const model = new THREE.Group();
+  const holes = [];
+  for (let t = 0; t < 3; t++) {
+    let best = -Infinity, bk = 0;
+    for (let j = 10; j < N - 10; j += 2) for (let i = 10; i < N - 10; i += 2) {
+      const k = j * N + i, u = i / (N - 1), v = j / (N - 1);
+      if (L.riverMask[k] > 0.05 || inPivot[k] >= 0) continue;
+      if (holes.some((h) => Math.hypot(h.u - u, h.v - v) < 0.16)) continue;
+      const sc = L.moisture[k] * (1 - L.h[k]) - 0.6 * L.slope[k] - 0.4 * Math.hypot(u - 0.45, v - 0.5);
+      if (sc > best) { best = sc; bk = k; }
+    }
+    holes.push({ u: (bk % N) / (N - 1), v: Math.floor(bk / N) / (N - 1) });
+  }
+  const holeMat = new THREE.MeshBasicMaterial({ color: 0x48a8e8 });
+  holes.forEach((h) => {
+    const base = farm.toWorld(h.u, h.v, 0);
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.9, 8), holeMat);
+    post.position.set(base.x, base.y + 0.45, base.z);
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(0.06, 14, 10), holeMat);
+    cap.position.set(base.x, base.y + 0.92, base.z);
+    const halo = new THREE.Mesh(new THREE.RingGeometry(0.16, 0.2, 40), new THREE.MeshBasicMaterial({ color: 0x48a8e8, transparent: true, opacity: 0.7, side: THREE.DoubleSide, depthWrite: false }));
+    halo.rotation.x = -Math.PI / 2;
+    halo.position.set(base.x, base.y + 0.02, base.z);
+    model.add(post, cap, halo);
+  });
+  scene.add(model);
+  const holeCentre = holes.reduce((a, h) => a.add(farm.toWorld(h.u, h.v, 0)), new THREE.Vector3()).divideScalar(holes.length);
+
+  // 3 · Engineer: the designed farm, pivot rings, a working pivot
+  const engineer = new THREE.Group();
+  L.pivots.forEach((p) => engineer.add(ring(p, 0.02, 0xc6f36b, 0.75)));
+  const pivot = L.pivots.length ? buildPivot(farm, L.pivots[0]) : null;
+  if (pivot) engineer.add(pivot.group);
+  scene.add(engineer);
+  const pc = L.pivots.length ? farm.toWorld(L.pivots[0].u, L.pivots[0].v, 0) : new THREE.Vector3();
+
+  // 4 · Watch: alert beacons standing on the farm
+  const watch = new THREE.Group();
+  const alerts = farmAlerts(farm);
+  const beacons = alerts.map((a) => {
+    const base = farm.toWorld(a.u, a.v, 0), col = ALERT_COLORS[a.k];
+    const g = new THREE.Group();
+    const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.4, 8), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.55 }));
+    beam.position.y = 0.7;
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 12), new THREE.MeshBasicMaterial({ color: col }));
+    head.position.y = 1.45;
+    const halo = new THREE.Mesh(new THREE.RingGeometry(0.22, 0.3, 40), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false }));
+    halo.rotation.x = -Math.PI / 2; halo.position.y = 0.03;
+    g.add(beam, head, halo);
+    g.position.copy(base);
+    watch.add(g);
+    return { g, halo };
+  });
+  L.pivots.forEach((p) => watch.add(ring(p, 0.05, 0x0b0d0c, 0.7)));
+  scene.add(watch);
+
+  // Chapters: colours, what is shown, and where the camera sits
+  const fit = (off) => off.clone().multiplyScalar(camera.aspect < 1 ? Math.min(1.6, 0.92 / camera.aspect) : 1);
+  const CHAPTERS = [
+    { colors: () => farm.colorsFor('terrain', 0, { untouched: true }).colors, groups: [survey], wood: 'wild', contour: 0.1,
+      pose: () => ({ tgt: new THREE.Vector3(0, 0.2, 0), pos: new THREE.Vector3(0, 0.2, 0).add(fit(new THREE.Vector3(9.5, 7.0, 10.5))) }) },
+    { colors: () => farm.colorsFor('water', 0, { untouched: true }).colors, groups: [model], wood: 'none', contour: 0.32,
+      pose: () => ({ tgt: holeCentre.clone().add(new THREE.Vector3(0, 0.2, 0)), pos: holeCentre.clone().add(fit(new THREE.Vector3(4.6, 3.6, 5.2))) }) },
+    { colors: () => farm.colorsFor('terrain', 3).colors, groups: [engineer], wood: 'farm', contour: 0.16,
+      pose: () => ({ tgt: pc.clone().add(new THREE.Vector3(0, 0.02, 0)), pos: pc.clone().add(fit(new THREE.Vector3(1.55, 1.0, 1.75))) }) },
+    { colors: () => farm.colorsFor('ndvi', 2).colors, groups: [watch], wood: 'farm', contour: 0.04,
+      pose: () => {
+        const h = 5.6 / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) / Math.min(1, camera.aspect);
+        return { tgt: new THREE.Vector3(0, 0, 0), pos: new THREE.Vector3(0.01, h, 0.9) };
+      } },
+  ];
+  const ALL = [survey, model, engineer, watch];
+  const cache = new Map();
+  const colorsOf = (i) => { if (!cache.has(i)) cache.set(i, CHAPTERS[i].colors()); return cache.get(i); };
+
+  let step = 0, from = null, t0 = 0, swapped = true;
+  const DUR = REDUCED_MOTION ? 0 : 1.9;
+  const ease = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+
+  function applyScene(i) {
+    const c = CHAPTERS[i];
+    ALL.forEach((g) => { g.visible = c.groups.includes(g); });
+    const farmed = c.wood === 'farm';
+    det.preclear.visible = c.wood === 'wild';
+    det.natural.visible = c.wood !== 'none';
+    det.orchard.visible = det.plantation.visible = det.yard.visible = farmed;
+    mat.uniforms.uContourAlpha.value = c.contour;
+    mat.uniforms.uFarm.value = farmed ? 1 : 0;
+  }
+  function go(i) {
+    if (i === step && from) return;
+    from = { pos: camera.position.clone(), tgt: controls.target.clone() };
+    step = i; t0 = performance.now(); swapped = false;
+    target = colorsOf(i); blending = true;
+    if (!DUR) { applyScene(i); swapped = true; }
+  }
+
+  // Start on chapter 1
+  colors.set(colorsOf(0));
+  terrain.geometry.attributes.color.needsUpdate = true;
+  applyScene(0);
+  { const p0 = CHAPTERS[0].pose(); camera.position.copy(p0.pos); controls.target.copy(p0.tgt); camera.lookAt(p0.tgt); }
+
+  let clock = 0;
+  viewer.tickers.push((dt) => {
+    clock += dt;
+    // Camera: ease between chapters, then drift gently
+    const to = CHAPTERS[step].pose();
+    const k = from && DUR ? Math.min(1, (performance.now() - t0) / (DUR * 1000)) : 1;
+    if (!swapped && k >= 0.45) { applyScene(step); swapped = true; }
+    const e = ease(k);
+    const pos = from ? from.pos.clone().lerp(to.pos, e) : to.pos;
+    const tgt = from ? from.tgt.clone().lerp(to.tgt, e) : to.tgt;
+    if (!REDUCED_MOTION) {
+      const off = pos.clone().sub(tgt), a = Math.sin(clock * 0.12) * 0.07;
+      off.applyAxisAngle(new THREE.Vector3(0, 1, 0), a);
+      pos.copy(tgt).add(off);
+    }
+    camera.position.copy(pos); controls.target.copy(tgt); camera.lookAt(tgt);
+
+    // Colours
+    if (blending) {
+      const a = 1 - Math.exp(-dt * 5);
+      let maxD = 0;
+      for (let n = 0; n < colors.length; n++) { const d = target[n] - colors[n]; colors[n] += d * a; if (Math.abs(d) > maxD) maxD = Math.abs(d); }
+      terrain.geometry.attributes.color.needsUpdate = true;
+      if (maxD < 0.002) blending = false;
+    }
+
+    // Chapter animation
+    if (survey.visible) {
+      let d = ((clock * 1.6) % pathLen), seg = 0;
+      while (seg < legLen.length - 1 && d > legLen[seg]) { d -= legLen[seg]; seg++; }
+      craft.position.copy(flight[seg]).lerp(flight[seg + 1], d / legLen[seg]);
+      footprint.position.set(craft.position.x, groundY(craft.position.x / W + 0.5, craft.position.z / W + 0.5) + 0.03, craft.position.z);
+    }
+    if (engineer.visible && pivot) pivot.update(0.6 + clock * 0.25, clock);
+    if (watch.visible) beacons.forEach((b, i) => { const s = 1 + 0.35 * Math.sin(clock * 3 + i); b.halo.scale.set(s, s, s); });
+    if (model.visible) model.children.forEach((m) => { if (m.geometry.type === 'RingGeometry') { const s = 1 + 0.3 * Math.sin(clock * 2.5); m.scale.set(s, s, s); } });
+  });
+
+  return { go, alerts, holes, chapters: CHAPTERS.length };
 }

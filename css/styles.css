@@ -676,3 +676,45 @@ input[type="range"]::-moz-range-thumb { width: 12px; height: 12px; border-radius
 .pin__map img { max-width: none !important; }
 .pin__map .leaflet-control-attribution { font-size: 10px; }
 @media (max-width: 560px) { .sheet--front { aspect-ratio: auto; width: 92%; } .sheet--back { width: 78%; } .report__stack { padding-left: 2%; } .sheet__facts dd { font-size: 15px; } }
+
+/* ---------------- Method story: sticky twin + scrolling chapters ---------------- */
+.story { padding-bottom: clamp(40px, 6vw, 80px); }
+.story__body { display: grid; grid-template-columns: 1.25fr 0.75fr; gap: clamp(28px, 5vw, 72px); align-items: start; }
+.story__stage { position: sticky; top: 88px; height: calc(100svh - 112px); min-height: 420px; }
+.story__frame { position: relative; height: 100%; border: 1px solid var(--line-2); border-radius: var(--radius); overflow: hidden;
+  background: radial-gradient(80% 70% at 50% 40%, #16201c, #0d100f); }
+.story__frame canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; z-index: 1; }
+.story__still { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .6s; z-index: 0; }
+.story__still.is-active { opacity: 1; }
+.story__frame:not(.is-loading) .story__still { opacity: 0; }
+.story__frame.is-loading::after { top: auto; bottom: 56px; transform: translateX(-50%); }
+.story__hud { position: absolute; left: 16px; right: 16px; bottom: 14px; z-index: 2; display: flex; justify-content: space-between; align-items: center; pointer-events: none; }
+.story__cap { font: 500 12px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--accent);
+  padding: 8px 10px; border-radius: 8px; background: rgba(11,13,12,.72); backdrop-filter: blur(8px); }
+.story__dots { list-style: none; margin: 0; padding: 8px 10px; display: flex; gap: 6px; border-radius: 999px; background: rgba(11,13,12,.72); }
+.story__dots li { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-3); transition: background .3s, width .3s; }
+.story__dots li.is-on { background: var(--accent); width: 20px; border-radius: 4px; }
+.lite .story__frame .load3d { bottom: 56px; }
+
+.story__steps { list-style: none; margin: 0; padding: 0; }
+.story__step { min-height: 78svh; display: flex; flex-direction: column; justify-content: center; padding: 24px 0; opacity: .35; transition: opacity .4s; }
+.story__step:first-child { min-height: 60svh; justify-content: flex-start; padding-top: 12vh; }
+.story__step:last-child { min-height: 70svh; }
+.story__step.is-on { opacity: 1; }
+.story__step h3 { font-size: clamp(30px, 3.4vw, 44px); margin: 18px 0 14px; }
+.story__step p { color: var(--ink-2); font-size: 17px; }
+.story__step .step__out { color: var(--ink-3) !important; padding-top: 12px; border-top: 1px dashed var(--line-2); margin: 6px 0 14px; }
+.story__step .step__n { color: var(--accent); }
+.story__step .link-arrow { align-self: flex-start; font-size: 15px; }
+@media (prefers-reduced-motion: reduce) { .story__step { opacity: 1; } }
+
+/* Narrow screens: the twin pins to the top, chapters scroll underneath it */
+@media (max-width: 860px) {
+  .story__body { display: block; }
+  .story__stage { top: 68px; height: 44svh; min-height: 260px; z-index: 5; margin: 0 calc(-1 * var(--gutter)); }
+  .story__frame { border-radius: 0; border-inline: 0; }
+  .story__step { min-height: 64svh; padding: 28px 0; }
+  .story__step:first-child { min-height: 50svh; padding-top: 32px; }
+  .story__step p { font-size: 16px; }
+}
+.no-webgl .story__frame canvas { display: none; }

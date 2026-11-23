@@ -1,7 +1,7 @@
 import { SITE_DEFAULTS, scoreCrops } from './suitability.js';
 import { $, $$, initPage, bindForm } from './common.js';
 
-initPage('.section__head, .step, .split__text, .viewer, .fit, .svc__item, .pillars li, .road li, .facts li');
+initPage('.section__head, .split__text, .viewer, .fit, .svc__item, .pillars li, .road li, .facts li');
 
 const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const TOUCH = window.matchMedia('(pointer: coarse)').matches;
@@ -175,7 +175,7 @@ function wantsLite() {
   const saved = store.get();
   if (saved) return saved === '1';
   const c = navigator.connection;
-  return !!(c && (c.saveData || /(^|-)2g|3g/.test(c.effectiveType || '')));
+  return !!(c && (c.saveData || /2g/.test(c.effectiveType || '')));
 }
 function webglOK() {
   try { const c = document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')); } catch { return false; }
@@ -218,7 +218,7 @@ function startScenes() {
   });
 }
 
-function buildScenes({ initHero, initSubsurface, initWatch, initEngineering, STAGES }) {
+function buildScenes({ initHero, initSubsurface, initWatch, initEngineering, initStory, STAGES }) {
   /* Hero twin */
   const fmtHa = (v) => `${Math.round(v)} ha`;
   const hero = initHero($('#hero-canvas'), {
@@ -278,6 +278,12 @@ function buildScenes({ initHero, initSubsurface, initWatch, initEngineering, STA
 
   /* Lazily build a view when it comes near the viewport */
   const whenNear = (el, fn, margin = '400px') => new IntersectionObserver(([e], o) => { if (e.isIntersecting) { o.disconnect(); fn(); } }, { rootMargin: margin }).observe(el);
+
+  /* Method story: one twin, four chapters */
+  whenNear($('#story-canvas'), () => {
+    story = initStory($('#story-canvas'));
+    story.go(chapter);
+  });
 
   /* Subsurface block */
   whenNear($('#aquifer-canvas'), () => {
@@ -359,6 +365,23 @@ $$('.feed li').forEach((li) => {
   li.addEventListener('blur', () => hot(li.dataset.k, false));
   li.addEventListener('click', () => { const on = !li.classList.contains('is-hot'); clearHot(); hot(li.dataset.k, on); });
 });
+
+/* Method story: the step in the middle of the screen sets the chapter */
+const storySteps = $$('.story__step');
+const STORY_NAMES = ['01 · Survey', '02 · Model', '03 · Engineer', '04 · Watch'];
+let story = null, chapter = 0;
+function setChapter(i) {
+  chapter = i;
+  storySteps.forEach((li, n) => li.classList.toggle('is-on', n === i));
+  $$('.story__still').forEach((img, n) => img.classList.toggle('is-active', n === i));
+  $$('.story__dots li').forEach((d, n) => d.classList.toggle('is-on', n === i));
+  $('#story-cap').textContent = STORY_NAMES[i];
+  story?.go(i);
+}
+const storyIO = new IntersectionObserver((entries) => entries.forEach((e) => {
+  if (e.isIntersecting) setChapter(+e.target.dataset.step);
+}), { rootMargin: window.matchMedia('(max-width: 860px)').matches ? '-68% 0px -30% 0px' : '-48% 0px -48% 0px' }); // phones: the twin covers the top of the screen
+storySteps.forEach((li) => storyIO.observe(li));
 
 /* Phones: quick-contact bar after the hero, hidden while the contact form is on screen */
 const bar = $('#actionbar');

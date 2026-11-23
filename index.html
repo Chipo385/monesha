@@ -30,7 +30,7 @@
       d.className = d.className.replace("no-js", "js");
       var saved = null; try { saved = localStorage.getItem("monesha-lite"); } catch (e) {}
       var c = navigator.connection;
-      var lite = saved ? saved === "1" : !!(c && (c.saveData || /(^|-)2g|3g/.test(c.effectiveType || "")));
+      var lite = saved ? saved === "1" : !!(c && (c.saveData || /2g/.test(c.effectiveType || "")));
       if (lite) { d.classList.add("lite"); return; }
       var l = document.createElement("link");
       l.rel = "modulepreload"; l.crossOrigin = ""; l.href = "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
@@ -168,38 +168,58 @@
       </div>
     </section>
 
-    <!-- METHOD -->
-    <section class="section" id="method" aria-labelledby="method-title">
+    <!-- METHOD: one twin, scrolled through four chapters -->
+    <section class="section story" id="method" aria-labelledby="method-title">
       <div class="wrap">
         <header class="section__head">
           <p class="kicker">01 · Method</p>
           <h2 id="method-title">From untouched land to a running operation, <em>in four moves</em>.</h2>
-          <p>Each step produces data the next step depends on. Nothing is designed until the ground has been measured, and nothing is built until it has been modelled.</p>
+          <p>Each step produces data the next step depends on. Scroll through them on the same land: nothing is designed until the ground has been measured, and nothing is built until it has been modelled.</p>
         </header>
-        <ol class="steps">
-          <li class="step">
+      </div>
+      <div class="wrap story__body">
+        <div class="story__stage">
+          <div class="story__frame is-loading" data-label="Building the twin">
+            <img class="story__still is-active" data-still="0" src="assets/renders/story-1.jpg" alt="" loading="lazy">
+            <img class="story__still" data-still="1" src="assets/renders/story-2.jpg" alt="" loading="lazy">
+            <img class="story__still" data-still="2" src="assets/renders/story-3.jpg" alt="" loading="lazy">
+            <img class="story__still" data-still="3" src="assets/renders/story-4.jpg" alt="" loading="lazy">
+            <button class="load3d" type="button" data-load3d>Load 3D view</button>
+            <canvas id="story-canvas" role="img" aria-label="The same farm in 3D, changing with each step of the method: surveyed, modelled for water, engineered, then watched from above."></canvas>
+            <div class="story__hud" aria-hidden="true">
+              <span class="story__cap" id="story-cap">01 · Survey</span>
+              <ol class="story__dots"><li class="is-on"></li><li></li><li></li><li></li></ol>
+            </div>
+          </div>
+        </div>
+        <ol class="story__steps">
+          <li class="story__step is-on" data-step="0">
             <span class="step__n mono">01</span>
             <h3>Survey</h3>
             <p>Centimetre-level 3D mapping of the land, crop-health imaging from the air, geo-referenced soil sampling with laboratory analysis, and a groundwater survey of the site.</p>
-            <p class="step__out mono">Output: site baseline &amp; soil map</p>
+            <p class="step__out">Output: site baseline &amp; soil map</p>
+            <a class="link-arrow" href="#svc-mapping">3D Land Mapping</a>
           </li>
-          <li class="step">
+          <li class="story__step" data-step="1">
             <span class="step__n mono">02</span>
             <h3>Model</h3>
-            <p>A 3D digital twin of surface and subsurface: topography, drainage, groundwater, and a ranked recommendation of what the land should grow given soil, climate and your goals.</p>
-            <p class="step__out mono">Output: digital twin &amp; crop plan</p>
+            <p>A 3D digital twin of surface and subsurface: topography, drainage, groundwater, and a ranked recommendation of what the land should grow given soil, climate and your goals. Here the twin strips away the canopy to the bare ground, shows where water gathers, and marks where boreholes should go.</p>
+            <p class="step__out">Output: digital twin &amp; crop plan</p>
+            <a class="link-arrow" href="#water">Look underground</a>
           </li>
-          <li class="step">
+          <li class="story__step" data-step="2">
             <span class="step__n mono">03</span>
             <h3>Engineer</h3>
-            <p>The farm designed inside the twin: parcels on the contour, boreholes on the fracture, irrigation sized to the hydraulics, drawn to engineering detail and built with our field engineers.</p>
-            <p class="step__out mono">Output: master plan &amp; build drawings</p>
+            <p>The farm designed inside the twin: parcels on the contour, boreholes on the fracture, irrigation sized to the hydraulics, drawn to engineering detail and built with our field engineers. The pivot here runs on the surveyed ground.</p>
+            <p class="step__out">Output: master plan &amp; build drawings</p>
+            <a class="link-arrow" href="#engineering">See the pivot design</a>
           </li>
-          <li class="step">
+          <li class="story__step" data-step="3">
             <span class="step__n mono">04</span>
             <h3>Watch</h3>
             <p>Continuous satellite monitoring for flood, fire, pests, disease, wind and change, on an online platform, with physical assessments every two to three weeks for commercial estates.</p>
-            <p class="step__out mono">Output: alerts, prescriptions, field reports</p>
+            <p class="step__out">Output: alerts, prescriptions, field reports</p>
+            <a class="link-arrow" href="#watch">See the alerts</a>
           </li>
         </ol>
       </div>

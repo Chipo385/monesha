@@ -30,6 +30,7 @@
     if (view === 'aquifer') { document.body.className = 'aq'; S.initSubsurface(c).setCutaway(true); }
     if (view === 'eng') S.initEngineering(c);
     if (view === 'sky') S.initWatch(c);
+    if (view === 'story') S.initStory(c).go(+(new URLSearchParams(location.search).get('step') || 0));
     if (view === 'before' || view === 'after') {
       c.hidden = true;
       const i = document.getElementById('i'), j = document.getElementById('j');
