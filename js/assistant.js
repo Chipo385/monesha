@@ -39,7 +39,7 @@ export function initAssistant() {
   root.className = 'assist';
   root.setAttribute('aria-label', 'Site assistant');
   root.innerHTML = `
-    <button class="assist__open" type="button" aria-expanded="false" aria-controls="assist-panel">Ask a question</button>
+    <button class="assist__open" type="button" aria-expanded="false" aria-controls="assist-panel" aria-label="Ask a question"><span class="assist__t">Ask a question</span><span class="assist__q" aria-hidden="true">?</span></button>
     <div class="assist__panel" id="assist-panel" hidden>
       <div class="assist__head"><div><b>Site assistant</b><span>Automatic answers, not a person</span></div><button type="button" class="assist__x" aria-label="Close assistant">×</button></div>
       <div class="assist__log" role="log" aria-live="polite" tabindex="0" aria-label="Conversation"></div>
