@@ -12,4 +12,7 @@ export const CONFIG = {
   // Optional form backend that accepts a JSON POST (Formspree, Basin, Getform, etc.).
   // When set, forms submit in the page without opening a mail app.
   formEndpoint: '',
+
+  // Social media page links (full https:// addresses). Icons show only for the ones filled in.
+  social: { facebook: '', x: '', instagram: '', linkedin: '' },
 };

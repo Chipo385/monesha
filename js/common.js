@@ -1,5 +1,6 @@
 // Shared behaviour for every page: nav, footer year, scroll reveal, contact links, forms.
 import { CONFIG } from './config.js';
+import { initAssistant } from './assistant.js';
 
 export const $ = (s, r = document) => r.querySelector(s);
 export const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -10,6 +11,8 @@ export function initPage(revealSelector) {
 
   initNav();
   initContactLinks();
+  initSocial();
+  initAssistant();
 
   if (revealSelector && 'IntersectionObserver' in window) {
     const io = new IntersectionObserver((entries) => entries.forEach((e) => {
@@ -79,6 +82,21 @@ function initContactLinks() {
   $$('[data-contact-group]').forEach((g) => { g.hidden = !$$('[data-contact]', g).some((a) => !a.hidden); });
 }
 
+const SOCIAL = {
+  facebook: ['Facebook', 'M14 8h3V4h-3c-2.8 0-5 2.2-5 5v2H6v4h3v7h4v-7h3l1-4h-4V9c0-.6.4-1 1-1z'],
+  x: ['X', 'M3 3h5l4.6 6.2L18 3h3l-7 8.1L21.500 21h-5l-5-6.700L5.600 21h-3l7.500-8.600z'],
+  instagram: ['Instagram', 'M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5zm0 2a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3zm5 3a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6z'],
+  linkedin: ['LinkedIn', 'M4 9h4v12H4zM6 3a2.200 2.200 0 1 1 0 4.400A2.200 2.200 0 0 1 6 3zm4 6h4v1.700c.7-1.200 2-2 3.600-2 2.900 0 4.400 1.800 4.400 5V21h-4v-6.500c0-1.500-.7-2.300-2-2.300s-2 .9-2 2.300V21h-4z'],
+};
+function initSocial() {
+  const set = Object.entries(SOCIAL).filter(([k]) => /^https:\/\//.test(CONFIG.social?.[k] || ''));
+  $$('[data-social]').forEach((ul) => {
+    ul.hidden = !set.length;
+    ul.innerHTML = set.map(([k, [name, d]]) => `<li><a data-k="${k}" target="_blank" rel="noopener" aria-label="${name}"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" fill="currentColor" d="${d}"/></svg></a></li>`).join('');
+    $$('a', ul).forEach((a) => { a.href = CONFIG.social[a.dataset.k]; });
+  });
+}
+
 /**
  * Validate and send a form.
  * With CONFIG.formEndpoint: POST as JSON in the page.
@@ -145,7 +163,7 @@ export function bindForm(form, { subject, summary, onSent }) {
         form.reset();
         onSent?.();
         status.dataset.tone = 'ok';
-        status.textContent = 'Thank you. We have your message and will reply within two working days.';
+        status.textContent = 'Thank you. We have your message.';
       } catch {
         status.dataset.tone = 'error';
         status.textContent = CONFIG.email

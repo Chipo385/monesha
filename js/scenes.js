@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { generateLandscape, makeNoise, sample, mulberry32 } from './terrain.js';
 import { addLights, treeMesh, yardGroup, LOW, lin, linearizeUnlit, srgbVertexColors, waterMesh } from './detail.js';
+import { buildDrone, buildSurvey, buildIrrigation } from './drone.js';
 
 // Colours are authored in sRGB and passed straight through.
 THREE.ColorManagement.enabled = false;
@@ -710,6 +711,14 @@ export function initHero(canvas, { onStats } = {}) {
   const { N, W, VS, L, inPivot, groundY } = farm;
   const viewer = createViewer(canvas, { camPos: [9.5, 7.2, 10.5], target: [0, 0.2, 0], autoRotate: 0.3 });
   const { scene } = viewer;
+  // Wide screens: move the farm right, clear of the headline
+  let shiftW = 0, shiftH = 0;
+  viewer.tickers.push(() => {
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    if (w === shiftW && h === shiftH) return;
+    shiftW = w; shiftH = h;
+    if (w > 1000) viewer.camera.setViewOffset(w, h, -0.16 * w, 0, w, h); else viewer.camera.clearViewOffset();
+  });
 
   const colors = new Float32Array(N * N * 3);
   let target = colors;
@@ -743,17 +752,9 @@ export function initHero(canvas, { onStats } = {}) {
     m.position.copy(farm.toWorld(u, v, 0.05));
     surveyGroup.add(m);
   }
-  const flight = [];
-  const alt = VS + 0.9;
-  for (let r = 0; r < 12; r++) {
-    const z = (-0.45 + r / 11 * 0.9) * W;
-    const xs = r % 2 ? [0.45 * W, -0.45 * W] : [-0.45 * W, 0.45 * W];
-    flight.push(new THREE.Vector3(xs[0], alt, z), new THREE.Vector3(xs[1], alt, z));
-  }
-  const flightLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints(flight),
-    new THREE.LineDashedMaterial({ color: 0xffffff, dashSize: 0.18, gapSize: 0.12, transparent: true, opacity: 0.45 }));
-  flightLine.computeLineDistances();
-  surveyGroup.add(flightLine);
+  const flightSim = buildSurvey(farm, { scale: 1.15 });
+  surveyGroup.add(flightSim.group);
+  viewer.tickers.push((dt) => { if (surveyGroup.visible && !REDUCED_MOTION) flightSim.update(dt); });
   scene.add(surveyGroup);
 
   linearizeUnlit(scene);
@@ -1042,7 +1043,8 @@ export function initEngineering(canvas, { onReadout } = {}) {
   farm.addDetail(scene);
 
   const pivot = buildPivot(farm, p, { towers: 7 });
-  scene.add(pivot.group);
+  const irrigation = buildIrrigation(farm);
+  scene.add(pivot.group, irrigation);
   const ring = [];
   for (let a = 0; a <= 128; a++) ring.push(farm.toWorld(p.u + Math.cos(a / 128 * 6.2832) * p.r, p.v + Math.sin(a / 128 * 6.2832) * p.r, 0.006));
   scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(ring), new THREE.LineBasicMaterial({ color: 0xc6f36b })));
@@ -1080,6 +1082,7 @@ export function initEngineering(canvas, { onReadout } = {}) {
   linearizeUnlit(scene);
   mat.uniforms.uNatural.value = 0; // starts on "height under span"
   return {
+    setIrrigation(on) { irrigation.visible = on; },
     setRelief(on) {
       mat.uniforms.uNatural.value = on ? 0 : 1;
       mesh.geometry.attributes.color.array.set(on ? relief : crop);
@@ -1169,22 +1172,8 @@ export function initStory(canvas) {
 
   // 1 · Survey: lawn-mower flight lines, a survey aircraft flying them, soil sample points
   const survey = new THREE.Group();
-  const alt = VS + 0.9, flight = [];
-  for (let r = 0; r < 12; r++) {
-    const z = (-0.45 + r / 11 * 0.9) * W;
-    const xs = r % 2 ? [0.45 * W, -0.45 * W] : [-0.45 * W, 0.45 * W];
-    flight.push(new THREE.Vector3(xs[0], alt, z), new THREE.Vector3(xs[1], alt, z));
-  }
-  const flightLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints(flight),
-    new THREE.LineDashedMaterial({ color: 0xffffff, dashSize: 0.18, gapSize: 0.12, transparent: true, opacity: 0.4 }));
-  flightLine.computeLineDistances();
-  survey.add(flightLine);
-  const craft = new THREE.Mesh(new THREE.SphereGeometry(0.09, 16, 12), new THREE.MeshBasicMaterial({ color: 0xc6f36b }));
-  const footprint = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.56, 48), new THREE.MeshBasicMaterial({ color: 0xc6f36b, transparent: true, opacity: 0.5, side: THREE.DoubleSide, depthWrite: false }));
-  footprint.rotation.x = -Math.PI / 2;
-  survey.add(craft, footprint);
-  const legLen = flight.slice(1).map((v, i) => v.distanceTo(flight[i]));
-  const pathLen = legLen.reduce((a, b) => a + b, 0);
+  const flightSim = buildSurvey(farm, { scale: 1.15 });
+  survey.add(flightSim.group);
   const dotGeo = new THREE.SphereGeometry(0.045, 10, 8), dotMat = new THREE.MeshBasicMaterial({ color: 0xc6f36b });
   for (let r = 0; r < 9; r++) for (let c = 0; c < 9; c++) {
     const u = 0.08 + (c + 0.5 * (r % 2)) / 9 * 0.84, v = 0.08 + r / 8 * 0.84;
@@ -1230,6 +1219,7 @@ export function initStory(canvas) {
   L.pivots.forEach((p) => engineer.add(ring(p, 0.02, 0xc6f36b, 0.75)));
   const pivot = L.pivots.length ? buildPivot(farm, L.pivots[0]) : null;
   if (pivot) engineer.add(pivot.group);
+  engineer.add(buildIrrigation(farm));
   scene.add(engineer);
   const pc = L.pivots.length ? farm.toWorld(L.pivots[0].u, L.pivots[0].v, 0) : new THREE.Vector3();
 
@@ -1328,12 +1318,7 @@ export function initStory(canvas) {
     }
 
     // Chapter animation
-    if (survey.visible) {
-      let d = ((clock * 1.6) % pathLen), seg = 0;
-      while (seg < legLen.length - 1 && d > legLen[seg]) { d -= legLen[seg]; seg++; }
-      craft.position.copy(flight[seg]).lerp(flight[seg + 1], d / legLen[seg]);
-      footprint.position.set(craft.position.x, groundY(craft.position.x / W + 0.5, craft.position.z / W + 0.5) + 0.03, craft.position.z);
-    }
+    if (survey.visible && !REDUCED_MOTION) flightSim.update(dt);
     if (engineer.visible && pivot) pivot.update(0.6 + clock * 0.25, clock);
     if (watch.visible) beacons.forEach((b, i) => { const s = 1 + 0.35 * Math.sin(clock * 3 + i); b.halo.scale.set(s, s, s); });
     if (model.visible) model.children.forEach((m) => { if (m.geometry.type === 'RingGeometry') { const s = 1 + 0.3 * Math.sin(clock * 2.5); m.scale.set(s, s, s); } });
@@ -1341,4 +1326,39 @@ export function initStory(canvas) {
 
   linearizeUnlit(scene);
   return { go, alerts, holes, chapters: CHAPTERS.length };
+}
+
+/* ------------------------------------------------------------------ */
+/* Drone close-ups for the service pictures: survey and spraying       */
+/* ------------------------------------------------------------------ */
+
+export function initDrone(canvas, { mode = 'survey' } = {}) {
+  const farm = getFarm();
+  const spray = mode === 'spray';
+  const pv = farm.L.pivots[0];
+  const at = spray ? { u: pv.u + 0.02, v: pv.v + 0.03 } : { u: 0.5, v: 0.56 };
+  const ground = farm.toWorld(at.u, at.v, 0);
+  const pos = ground.clone().add(new THREE.Vector3(0, spray ? 0.2 : 1.1, 0));
+  const off = spray ? new THREE.Vector3(0.7, 0.28, 0.75) : new THREE.Vector3(1.5, 0.75, 1.7);
+  const viewer = createViewer(canvas, { camPos: pos.clone().add(off).toArray(), target: [pos.x, pos.y - (spray ? 0.02 : 0.2), pos.z], autoRotate: 0.3, minDist: 0.5, maxDist: 6 });
+  const { scene } = viewer;
+  const mat = realTerrainMaterial({ contourAlpha: 0, ring: farm.ringSpacing });
+  scene.add(farm.mesh(farm.colorsFor('terrain', spray ? 3 : 1).colors, mat));
+  addLights(scene, [6, 16], viewer.renderer, { center: ground, extent: spray ? 2 : 4 });
+  farm.addDetail(scene);
+  const drone = buildDrone(spray ? 0.42 : 0.9);
+  drone.group.position.copy(pos);
+  drone.group.rotation.y = 0.5;
+  scene.add(drone.group);
+  let mist = null;
+  if (spray) {
+    const n = 900, a = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) { const f = Math.random(), w = 0.05 + 0.13 * f; a.set([pos.x + (Math.random() * 2 - 1) * w, pos.y - 0.05 - f * 0.13, pos.z + (Math.random() * 2 - 1) * w], i * 3); }
+    mist = new THREE.Points(new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(a, 3)),
+      new THREE.PointsMaterial({ color: 0xe6f4ff, size: 0.006, transparent: true, opacity: 0.5, depthWrite: false }));
+    scene.add(mist);
+  }
+  linearizeUnlit(scene);
+  viewer.tickers.push((dt) => drone.spin(dt));
+  return { zoom: viewer.zoom, setInteractive: viewer.setInteractive };
 }

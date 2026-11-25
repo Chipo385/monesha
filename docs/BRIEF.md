@@ -27,7 +27,7 @@ Distilled from the Antigravity conversation "Moneshe Precision Technologies Land
 
 - **Never name equipment, sensors, drones, compute hardware, software vendors or data
   providers.** The tech stack is a trade secret. Talk about results, resolutions,
-  turnaround and capabilities only.
+  turnaround and capabilities only. A generic, unbranded drone may be shown (it is core to the service).
 - **Long-term plans** beyond agriculture live in `docs/BUSINESS.md` only (kept out of git). Never mention them on the website or in client-facing material.
 - Don't publish pricing on the site. (The business plan has ZMW price ranges for proposals.)
 

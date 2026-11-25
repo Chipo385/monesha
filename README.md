@@ -23,6 +23,7 @@ All contact details live in **`js/config.js`**:
 | -------------- | ---------------------------------------------------------------------------- |
 | `email`        | Shown on the contact sections and footer; forms open the visitor's mail app  |
 | `whatsapp`     | Digits in international format; adds a "Message us on WhatsApp" link         |
+| `social`       | Facebook, X, Instagram and LinkedIn page links; icons show when set           |
 | `formEndpoint` | A JSON form backend (e.g. Formspree). Forms then send in the page            |
 
 With nothing set, forms copy a summary to the clipboard so no enquiry is lost while testing.
@@ -32,6 +33,7 @@ Both forms validate fields inline and carry a hidden spam trap (`_gotcha`).
 
 ```
 index.html            home page markup and copy
+explore.html          working demos: twin controls, groundwater, crop fit, irrigation, watch, outcome
 careers.html          careers page: values, roles, hiring process, application form
 platform.html         Watch platform demo: KPIs, farm map, alerts, vigour chart, fields, visits
 404.html              not-found page (paths assume the site lives at /monesha/)
@@ -45,6 +47,8 @@ js/platform.js        platform demo: simulated season data, chart, tables, map
 js/scenes.js          Three.js: shared farm model + hero twin, method story (one twin,
                       four camera stops), groundwater block,
                       satellite (Watch) view, pivot engineering view, outcome renders
+js/drone.js           generic drone, survey flight with photo frames, irrigation layout
+js/assistant.js       site assistant: fixed answers in the browser, no AI service or cost
 js/detail.js          trees, farmyard equipment, lighting, and the low-power quality tier
 js/terrain.js         procedural landscape: noise, river carving, erosion, drainage, parcels
 js/suitability.js     illustrative crop scoring model
@@ -109,7 +113,7 @@ replace that address, set `<base href="/">` in `404.html`, and add a `CNAME` fil
 
 - Fill in `js/config.js` (at minimum `email`, ideally `whatsapp` too).
 - Team photos and credentials for the About section (real people build trust when there are no testimonials yet).
-- Price guidance ("from K… per hectare") once rates are set; the pricing note says how pricing works but gives no figures.
+- Real photographs for the service cards: replace the matching file in `assets/renders/` and remove that card's "Simulated" caption.
 - **Imagery**: every farm visual is rendered live from one simulated farm, so the site is
   consistent and has no stock photos. Once real projects exist, add real survey outputs
   (with client permission) alongside the simulations.
