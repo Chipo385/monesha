@@ -111,7 +111,7 @@ replace that address, set `<base href="/">` in `404.html`, and add a `CNAME` fil
 
 ## To do before going live
 
-- Fill in `js/config.js` (at minimum `email`, ideally `whatsapp` too).
+- `js/config.js`: email is set (temporary Gmail, to be replaced by a business address; also update it in the structured data in `index.html`). Still to add: `whatsapp`, `social`, `formEndpoint`.
 - Team photos and credentials for the About section (real people build trust when there are no testimonials yet).
 - Real photographs for the service cards: replace the matching file in `assets/renders/` and remove that card's "Simulated" caption.
 - **Imagery**: every farm visual is rendered live from one simulated farm, so the site is

@@ -782,3 +782,5 @@ input[type="range"]::-moz-range-thumb { width: 12px; height: 12px; border-radius
 .hero__tag { right: auto; left: 50%; transform: translateX(-50%); }
 @media (max-width: 600px) { .hero__tag { transform: none; left: auto; } }
 .about .ticks { margin-bottom: 24px; }
+.contact-list a { flex-wrap: wrap; gap: 2px 14px; overflow-wrap: anywhere; }
+.form legend.sr-only { width: 1px; margin: 0; padding: 0; left: 0; }
