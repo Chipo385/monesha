@@ -1,5 +1,5 @@
 // Generic survey/spray drone and the survey flight that photographs the land.
-// Deliberately not any real make or model (see docs/BRIEF.md).
+// Deliberately not any real make or model.
 import * as THREE from 'three';
 import { lin, LOW } from './detail.js';
 

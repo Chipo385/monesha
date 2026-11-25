@@ -59,7 +59,7 @@ assets/renders/       WebP stills of each 3D view, story chapter and before/afte
 assets/logo/          logo files and concepts (open index.html to compare)
 site.webmanifest, robots.txt, sitemap.xml
 tools/                og.html, icon.html, render.html and build-assets.sh, which renders them
-docs/BRIEF.md         brand, content and confidentiality rules
+docs/BRIEF.md         brand, content and confidentiality rules (this drive only, ignored by git)
 docs/BUSINESS.md      business plan (internal: on this drive only, ignored by git)
 reference/            old Stitch export and AI renders (local only, not in git)
 ```
